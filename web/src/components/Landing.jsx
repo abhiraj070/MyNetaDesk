@@ -19,9 +19,9 @@ const item = {
 };
 
 const PROMISES = [
-  "Name, party, constituency",
-  "Education and declared cases",
-  "Their party's manifesto",
+  "Name, party, and their office",
+  "Their record, in plain terms",
+  "Party commitments, where we have them",
   "A slap or a rose — one side each",
 ];
 

@@ -18,7 +18,7 @@ const sourceSerif = Source_Serif_4({
 export const metadata = {
   title: "Slap Your Leader",
   description:
-    "Find the MLA and MP for wherever you're standing, read their record, and register a verdict.",
+    "Find the Chief Minister for wherever you're standing, read their record, and register a verdict.",
 };
 
 export const viewport = {

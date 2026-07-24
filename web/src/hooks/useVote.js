@@ -1,9 +1,9 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
-import { castMinistryVote, castVote } from "@/lib/api";
+import { castCmVote, castMinistryVote } from "@/lib/api";
 
 /**
  * Picks a side for one subject, then lets you keep hitting it.
@@ -16,10 +16,11 @@ import { castMinistryVote, castVote } from "@/lib/api";
  * It resets on reload, which is correct — the count the API returns already
  * includes everything recorded earlier.
  *
- * `tier` is "mla" | "mp" | "minister"; ministers go to their own endpoint.
+ * `tier` is "cm" | "minister"; each goes to its own endpoint.
  */
 export function useVote(tier, subject) {
   const isMinister = tier === "minister";
+  const queryClient = useQueryClient();
 
   const [choice, setChoice] = useState(null);
   const [casts, setCasts] = useState(0);
@@ -30,7 +31,25 @@ export function useVote(tier, subject) {
   const countRef = useRef(0);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: isMinister ? castMinistryVote : castVote,
+    mutationFn: isMinister ? castMinistryVote : castCmVote,
+    // A vote changes standings — invalidate every leaderboard query (all
+    // tiers/boards share the `["leaderboard", ...]` prefix) so a currently
+    // mounted board refetches immediately, and any not currently mounted is
+    // marked stale for the moment it's next opened. Belt-and-suspenders
+    // alongside `useLeaderboard`'s `refetchOnMount: "always"` — that alone
+    // covers "reopen the sheet," this covers "sheet already open elsewhere."
+    //
+    // Also invalidate the home CM's own location query: `RepresentativeCard`
+    // remounts (resetting `casts` to 0) whenever the subject changes and
+    // changes back — e.g. search someone else, then hit "Back" — and without
+    // this, the count displayed after that round trip would silently fall
+    // back to whatever `cm-location` fetched on the very first page load,
+    // undercounting every vote cast since then even though the server has
+    // the right total.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["cm-location"] });
+    },
   });
 
   const vote = useCallback(
@@ -51,9 +70,8 @@ export function useVote(tier, subject) {
             choice: next,
           }
         : {
-            tier,
             name: subject.name,
-            constituencyKey: subject.constituency_key,
+            stateKey: subject.state_key,
             choice: next,
           };
 
@@ -67,7 +85,7 @@ export function useVote(tier, subject) {
         },
       });
     },
-    [choice, isMinister, mutate, subject, tier],
+    [choice, isMinister, mutate, subject],
   );
 
   return { choice, casts, vote, isPending, isError };

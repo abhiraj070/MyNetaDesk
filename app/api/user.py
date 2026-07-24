@@ -1,5 +1,5 @@
 from app.main import app
-from app.schema import LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest, GetMinisterRequest, GetMpRequest
+from app.schema import LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest, GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest
 from app.db.connect import get_db, engine
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, Query
@@ -11,8 +11,8 @@ mp= Table("mps", metadata, autoload_with= engine)
 pc= Table("parliamentary_constituencies", metadata, autoload_with= engine)
 manifesto= Table("party_manifesto_points", metadata, autoload_with=engine)
 minister= Table("ministers", metadata, autoload_with= engine)
+cm= Table("chief_ministers", metadata, autoload_with= engine)
 
-# MLA support removed — the only member table left is `mps`.
 MEMBER_TABLES= {"mps": mp}
 
 
@@ -197,6 +197,94 @@ def get_mp_by_name(request: GetMpRequest, db: Session= Depends(get_db)):
         )
         mp_details= db.execute(stmt).mappings().first()
         return {"mp_details": mp_details}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+@app.post("/get-cm-location")
+def get_cm_location(request: LocationRequest, db: Session= Depends(get_db)):
+    try:
+        latitude= request.latitude
+        longitude= request.longitude
+
+        user_point= func.ST_SetSRID(
+            func.ST_Point(longitude, latitude),
+            4326
+        )
+        stmt= (select(cm.c.name, cm.c.state, cm.c.state_key, cm.c.party, cm.c.designation, cm.c.photo_url, cm.c.slap_count, cm.c.rose_count, cm.c.manifesto_points)
+                .join(pc, cm.c.state_key==pc.c.state_key)
+                .where(func.ST_Contains(pc.c.geom, user_point))
+        )
+
+        final_cm= db.execute(stmt).mappings().first()
+        return {"cm": final_cm}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+@app.post("/get-cm")
+def get_cm(request: GetCmRequest, db: Session= Depends(get_db)):
+    try:
+        state_key= request.state_key
+        stmt= select(cm.c.name, cm.c.state, cm.c.state_key, cm.c.party, cm.c.designation, cm.c.photo_url, cm.c.slap_count, cm.c.rose_count, cm.c.manifesto_points)
+
+        if not state_key:
+            all_cms= db.execute(stmt.order_by(cm.c.state)).mappings().all()
+            return {"cms": all_cms}
+
+        final_cm_details= db.execute(stmt.where(cm.c.state_key==state_key)).mappings().first()
+        return {"cm_details": final_cm_details}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+@app.get("/get-leaderboard-cm")
+def get_leaderboard_cm(offset:int= Query(0,ge=0,le=100), limit: int= Query(10,ge=1,le=100), db: Session= Depends(get_db)):
+    try:
+        cols= (cm.c.name, cm.c.state, cm.c.state_key, cm.c.party,
+               cm.c.photo_url, cm.c.slap_count, cm.c.rose_count)
+        slap_toppers= db.execute(
+            select(*cols).order_by(cm.c.slap_count.desc(), cm.c.id.asc())
+                         .limit(limit)
+                         .offset(offset)
+        ).mappings().all()
+        rose_toppers= db.execute(
+            select(*cols).order_by(cm.c.rose_count.desc(), cm.c.id.asc())
+                         .limit(limit)
+                         .offset(offset)
+        ).mappings().all()
+        return {"slap_toppers": slap_toppers, "rose_toppers": rose_toppers}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+@app.patch("/update-cm-count")
+def update_cm_count(request: UpdateCmRequest, db: Session= Depends(get_db)):
+    try:
+        field= request.field_to_update
+        name= request.name_field_to_update
+        state_key= request.state_key
+        if field not in ("slap_count", "rose_count"):
+            raise HTTPException(status_code=400, detail=f"Cannot update {field} field")
+
+        stmt= (update(cm)
+                .where((cm.c.state_key==state_key) & (cm.c.name==name))
+                .values({field: cm.c[field]+1})
+        )
+
+        result= db.execute(stmt)
+        db.commit()
+        return {"rows_updated": result.rowcount}
+    except HTTPException:
+        raise
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:

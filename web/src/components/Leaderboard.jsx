@@ -8,13 +8,13 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { toFriendlyError } from "@/lib/api";
 
 const TIER_COPY = {
-  mp: { scope: "Lok Sabha constituencies across India" },
-  minister: { scope: "The union council of ministers" },
+  cm: { scope: "Chief Ministers across India's states" },
+  minister: { scope: "India's Union Ministers" },
 };
 
 const TIERS = [
-  { value: "mp", label: "MPs" },
-  { value: "minister", label: "Ministers" },
+  { value: "cm", label: "Chief Ministers" },
+  { value: "minister", label: "Union Ministers" },
 ];
 
 const BOARDS = [
@@ -23,9 +23,9 @@ const BOARDS = [
 ];
 
 /**
- * The full leaderboard: two top-level sections — MPs and Ministers — each
- * with its own Slap/Rose sub-tabs underneath. That's four independent,
- * independently-paginated rankings in total; switching either tab swaps
+ * The full leaderboard: two top-level sections — Chief Ministers and
+ * Ministers — each with its own Slap/Rose sub-tabs underneath. That's four
+ * independent, independently-paginated rankings in total; switching either tab swaps
  * which one is on screen, it doesn't merge or reset the others.
  *
  * `defaultTier` opens on whichever tier the current representative belongs
@@ -37,7 +37,7 @@ const BOARDS = [
  * marks the one row currently being fetched, formatted `"${tier}:${name}"`.
  */
 export function Leaderboard({
-  defaultTier = "mp",
+  defaultTier = "cm",
   highlightName = null,
   onSelectTopper,
   pendingKey,
@@ -126,7 +126,7 @@ function TierBoard({ tier, board, highlightName, onSelectTopper, pendingKey }) {
 }
 
 /** A pill-switcher, reused for both the tier tabs and the board sub-tabs. */
-function PillTabs({ options, value, onChange, ariaLabel }) {
+export function PillTabs({ options, value, onChange, ariaLabel }) {
   const instanceId = useId();
   const pillId = `lb-pill-${instanceId}`;
 
@@ -401,6 +401,6 @@ function formatSecondary(tier, topper) {
       .trim();
     return [party, cleaned || portfolio].filter(Boolean).join(" · ");
   }
-  const constituency = titleCase(topper.constituency);
-  return [party, constituency].filter(Boolean).join(" · ");
+  const state = titleCase(topper.state);
+  return [party, state].filter(Boolean).join(" · ");
 }

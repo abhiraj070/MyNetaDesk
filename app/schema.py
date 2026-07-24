@@ -31,3 +31,11 @@ class GetMinisterRequest(BaseModel):
 class GetMpRequest(BaseModel):
     name: str
     constituency_key: str
+
+class GetCmRequest(BaseModel):
+    state_key: Optional[str] = None
+
+class UpdateCmRequest(BaseModel):
+    name_field_to_update: str
+    state_key: str
+    field_to_update: str

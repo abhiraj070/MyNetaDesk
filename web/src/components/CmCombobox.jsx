@@ -3,22 +3,23 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 
-import { highlight, searchMinistries } from "@/lib/ministries";
+import { highlight } from "@/lib/ministries";
+import { searchCms } from "@/lib/chiefMinisters";
 
 /**
- * Searchable ministry picker, following the ARIA combobox pattern:
- * `aria-expanded` / `aria-controls` / `aria-activedescendant` on the input,
- * with a listbox of options. Arrow keys move, Enter selects, Escape dismisses.
+ * Searchable Chief Minister picker, following the same ARIA combobox pattern
+ * as `MinistryCombobox`: `aria-expanded` / `aria-controls` /
+ * `aria-activedescendant` on the input, with a listbox of options. Arrow
+ * keys move, Enter selects, Escape dismisses.
  *
- * Filtering is local over ~119 entries, so results update on every keystroke
- * with no network and no debounce needed.
+ * Simpler than the ministry picker underneath — 31 flat rows, no portfolio
+ * fragments or rank grouping — but the interaction shape stays identical so
+ * switching tabs in the Search sheet doesn't relearn a new control.
  */
-export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
+export function CmCombobox({ cms, selected, onSelect, onClear }) {
   const listboxId = useId();
   const optionId = (index) => `${listboxId}-opt-${index}`;
 
-  // `draft` is null until the user types, so an outside selection (a quick-pick
-  // chip) still shows in the field. The displayed value is derived from both.
   const [draft, setDraft] = useState(null);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -27,22 +28,16 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
-  const value = draft ?? selected?.label ?? "";
-  // Not typing means no filter: show the whole list rather than the single
-  // entry that happens to match the current selection's own label.
+  const value = draft ?? selected?.name ?? "";
   const effectiveQuery = draft ?? "";
 
   const results = useMemo(
-    () => searchMinistries(entries, effectiveQuery),
-    [entries, effectiveQuery],
+    () => searchCms(cms, effectiveQuery),
+    [cms, effectiveQuery],
   );
 
-  // Derived rather than corrected in an effect: when the query narrows the
-  // list, a stale index would point past the end and Enter would select
-  // nothing. `activeIndex` is reset to 0 wherever the query changes.
   const active = results.length > 0 ? Math.min(activeIndex, results.length - 1) : 0;
 
-  // Keep the active option in view during keyboard navigation.
   useEffect(() => {
     if (!open) return;
     listRef.current
@@ -55,7 +50,6 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
     setDraft(null);
   }, []);
 
-  // Dismiss on any pointer press outside the whole control.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event) => {
@@ -66,9 +60,9 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
   }, [open, close]);
 
   const commit = useCallback(
-    (entry) => {
-      if (!entry) return;
-      onSelect(entry);
+    (cm) => {
+      if (!cm) return;
+      onSelect(cm);
       setDraft(null);
       setOpen(false);
       inputRef.current?.blur();
@@ -136,10 +130,10 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
           aria-activedescendant={
             open && results.length > 0 ? optionId(active) : undefined
           }
-          aria-label="Search a ministry or a Union Minister"
+          aria-label="Search a state or a Chief Minister"
           autoComplete="off"
           spellCheck={false}
-          placeholder="Search a ministry or a Union Minister"
+          placeholder="Search a state or a Chief Minister"
           value={value}
           onChange={(event) => {
             setDraft(event.target.value);
@@ -162,7 +156,7 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
               setDraft(null);
               setOpen(false);
             }}
-            aria-label="Clear selected ministry"
+            aria-label="Clear selected Chief Minister"
             className="shrink-0 rounded-full p-1 text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <X className="size-4" strokeWidth={2} />
@@ -170,8 +164,8 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
         ) : (
           <span className="shrink-0 text-[11px] whitespace-nowrap text-faint">
             {open && effectiveQuery
-              ? `${results.length} of ${entries.length}`
-              : `${entries.length} portfolios`}
+              ? `${results.length} of ${cms.length}`
+              : `${cms.length} states`}
           </span>
         )}
       </div>
@@ -182,25 +176,25 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
             ref={listRef}
             id={listboxId}
             role="listbox"
-            aria-label="Ministries"
+            aria-label="Chief Ministers"
             className="max-h-72 overflow-y-auto"
           >
-            {results.map((entry, index) => (
+            {results.map((cm, index) => (
               <Option
-                key={entry.id}
+                key={cm.state_key}
                 id={optionId(index)}
-                entry={entry}
+                cm={cm}
                 query={effectiveQuery}
                 active={index === active}
-                selected={selected?.id === entry.id}
-                onPick={() => commit(entry)}
+                selected={selected?.state_key === cm.state_key}
+                onPick={() => commit(cm)}
                 onHover={() => setActiveIndex(index)}
               />
             ))}
 
             {results.length === 0 && (
               <li className="px-3.5 py-6 text-center text-sm text-muted">
-                No ministry or Union Minister matches “{effectiveQuery}”.
+                No state or Chief Minister matches “{effectiveQuery}”.
               </li>
             )}
           </ul>
@@ -216,7 +210,7 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
   );
 }
 
-function Option({ id, entry, query, active, selected, onPick, onHover }) {
+function Option({ id, cm, query, active, selected, onPick, onHover }) {
   return (
     <li
       id={id}
@@ -235,15 +229,14 @@ function Option({ id, entry, query, active, selected, onPick, onHover }) {
     >
       <div className="flex items-baseline gap-3">
         <span className="min-w-0 flex-1 truncate text-sm text-ink">
-          <Marked runs={highlight(entry.label, query)} />
+          <Marked runs={highlight(cm.name, query)} />
         </span>
         <span className="shrink-0 text-[11px] whitespace-nowrap text-muted">
-          {entry.rank}
+          {cm.party}
         </span>
       </div>
       <p className="mt-0.5 truncate text-xs text-muted">
-        <Marked runs={highlight(entry.minister.minister_name, query)} />
-        {entry.minister.party ? ` · ${entry.minister.party}` : ""}
+        <Marked runs={highlight(cm.state, query)} />
       </p>
     </li>
   );

@@ -27,18 +27,18 @@ export function toFriendlyError(error) {
 }
 
 /**
- * `POST /get-location` — resolves a GPS point to the MP whose parliamentary
- * constituency contains it. Returns `{ mp }`; `mp` can be null when the point
- * falls outside every stored boundary (or the party has no manifesto row —
- * the handler inner-joins `party_manifesto_points`).
+ * `POST /get-cm-location` — resolves a GPS point to the Chief Minister of
+ * whichever state contains it (via the existing parliamentary-constituency
+ * polygons, purely to read off `state_key` — no new boundary data). Returns
+ * `{ cm }`; `cm` is null when the point falls outside every stored boundary.
  */
-export async function fetchRepresentatives({ latitude, longitude }) {
-  const { data } = await api.post("/get-location", { latitude, longitude });
+export async function fetchCmLocation({ latitude, longitude }) {
+  const { data } = await api.post("/get-cm-location", { latitude, longitude });
   return data;
 }
 
 const LEADERBOARD_PATH = {
-  mp: "/get-leaderboard-mp",
+  cm: "/get-leaderboard-cm",
   minister: "/get-leaderboard-minister",
 };
 
@@ -72,38 +72,42 @@ export async function fetchMinisters() {
   return Array.isArray(data?.ministers) ? data.ministers : [];
 }
 
-/** The UI speaks tier names; the API wants the table name. */
-const TABLE_FOR_TIER = { mp: "mps" };
 const COLUMN_FOR_CHOICE = { slap: "slap_count", rose: "rose_count" };
 
 /**
- * `PATCH /update-member-count` — increments the slap or rose tally by one.
+ * `POST /get-cm` with no `state_key` — returns all 31 chief ministers.
  *
- * The API identifies the row by (constituency_key, name), so both must be the
- * exact values that came back from `/get-location`.
+ * Fetched once so the CM picker can filter locally, the same way the ministry
+ * picker already does — 31 rows is trivial to hold client-side.
  */
-export async function castVote({ tier, name, constituencyKey, choice }) {
-  const { data } = await api.patch("/update-member-count", {
-    table_to_update: TABLE_FOR_TIER[tier],
-    name_field_to_update: name,
-    constituency_key: constituencyKey,
-    field_to_update: COLUMN_FOR_CHOICE[choice],
-  });
-  return data;
+export async function fetchCms() {
+  const { data } = await api.post("/get-cm", {});
+  return Array.isArray(data?.cms) ? data.cms : [];
 }
 
 /**
- * `POST /get-mps-by-name` — the full record for one MP, identified by
- * (name, constituency_key) the same way `castVote` identifies them. Used to
- * open a leaderboard row as a full profile. Returns `{ mp_details }`, `null`
- * when nothing matches.
+ * `POST /get-cm` with a `state_key` — the full record for one Chief Minister.
+ * Used both to open a leaderboard row as a full profile and by the CM picker
+ * when a search result is chosen. Returns `{ cm_details }`, `null` when
+ * nothing matches.
  */
-export async function fetchMpByName({ name, constituencyKey }) {
-  const { data } = await api.post("/get-mps-by-name", {
-    name,
-    constituency_key: constituencyKey,
+export async function fetchCmByStateKey(stateKey) {
+  const { data } = await api.post("/get-cm", { state_key: stateKey });
+  return data?.cm_details ?? null;
+}
+
+/**
+ * `PATCH /update-cm-count` — increments a Chief Minister's slap or rose
+ * tally by one. The API identifies the row by (state_key, name) — exactly
+ * one CM per state, so this is never ambiguous.
+ */
+export async function castCmVote({ name, stateKey, choice }) {
+  const { data } = await api.patch("/update-cm-count", {
+    name_field_to_update: name,
+    state_key: stateKey,
+    field_to_update: COLUMN_FOR_CHOICE[choice],
   });
-  return data?.mp_details ?? null;
+  return data;
 }
 
 /**

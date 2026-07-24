@@ -16,6 +16,15 @@ const PAGE_SIZE = 10;
  *
  * `enabled` lets the caller defer the fetch until this specific board is
  * actually the one on screen.
+ *
+ * No `staleTime`: standings change every time anyone votes, from any
+ * session, so cached data is never a safe stand-in for a fresh read. The
+ * leaderboard sheet fully unmounts on close (`BottomSheet` conditionally
+ * renders its children), so every open is a fresh mount — leaving this at
+ * the default (data considered stale immediately) is what makes every open
+ * refetch. `useVote`'s `onSuccess` also invalidates this query key directly,
+ * so a vote is reflected the moment the sheet is next opened even if the
+ * fetch that's about to run were somehow still in its window.
  */
 export function useLeaderboard(tier, board, enabled) {
   const query = useInfiniteQuery({
@@ -29,7 +38,7 @@ export function useLeaderboard(tier, board, enabled) {
       return list.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined;
     },
     enabled,
-    staleTime: 60_000,
+    refetchOnMount: "always",
   });
 
   const pages = query.data?.pages ?? [];

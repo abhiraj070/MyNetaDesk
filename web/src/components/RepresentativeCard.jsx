@@ -12,10 +12,10 @@ import { useVote } from "@/hooks/useVote";
 import { useVoteChoreography } from "@/hooks/useVoteChoreography";
 
 const ROLE_LABEL = {
-  // Only the home MP (resolved from the user's own location) is "yours" —
-  // one tapped in from the leaderboard is someone else's, so it falls back
-  // to the plain title rather than misrepresenting whose seat it is.
-  mp: (subject) => (subject?.isHome ? "Your MP" : "Member of Parliament"),
+  // Only the home CM (resolved from the user's own location) is "yours" —
+  // one tapped in from the leaderboard or search is someone else's, so it
+  // falls back to the plain title rather than misrepresenting whose seat it is.
+  cm: (subject) => (subject?.isHome ? "Your CM" : "Chief Minister"),
   minister: (subject) => subject?.rank_title || "Union Minister",
 };
 

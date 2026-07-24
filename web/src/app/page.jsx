@@ -14,9 +14,9 @@ import { SearchSheet } from "@/components/SearchSheet";
 import { ErrorScreen, LocatingScreen } from "@/components/StatusScreens";
 import { useMinistries } from "@/hooks/useMinistries";
 import {
+  fetchCmByStateKey,
+  fetchCmLocation,
   fetchMinisterByName,
-  fetchMpByName,
-  fetchRepresentatives,
   toFriendlyError,
 } from "@/lib/api";
 import {
@@ -34,16 +34,16 @@ const RANK_ORDER = {
 };
 
 /**
- * Reads the incoming query string once. `?share=mp&lat=&lng=` opens the MP
- * page for those coordinates without prompting for location again;
- * `?share=minister&name=` seeds the pending minister name so we can pick
- * their entry once the ministries list loads.
+ * Reads the incoming query string once. `?share=cm&lat=&lng=` opens the
+ * Chief Minister page for those coordinates without prompting for location
+ * again; `?share=minister&name=` seeds the pending minister name so we can
+ * pick their entry once the ministries list loads.
  */
 function readDeepLink() {
   if (typeof window === "undefined") return { coords: null, ministerName: null };
   const params = new URLSearchParams(window.location.search);
   const share = params.get("share");
-  if (share === "mp") {
+  if (share === "cm") {
     const lat = parseFloat(params.get("lat"));
     const lng = parseFloat(params.get("lng"));
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
@@ -60,7 +60,10 @@ export default function Home() {
   const [geoError, setGeoError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
   const [openSheet, setOpenSheet] = useState(null); // "info" | "leaderboard" | "search" | null
-  const [selectedMinistry, setSelectedMinistry] = useState(null);
+  // A search-picked result, either tier — `{ tier: "cm" | "minister", data }`.
+  // Kept as one variable (not two) so a cm pick and a minister pick can never
+  // both be "selected" at once.
+  const [selectedSearchResult, setSelectedSearchResult] = useState(null);
   // Set when a leaderboard row is tapped — a fully-fetched subject that
   // overrides whatever else is on screen until the user backs out of it.
   const [leaderboardSubject, setLeaderboardSubject] = useState(null);
@@ -71,8 +74,9 @@ export default function Home() {
     () => readDeepLink().ministerName,
   );
 
-  // Ministries are pre-fetched here (not only when the Search sheet opens) so
-  // deep links can resolve a shared minister on first render.
+  // Pre-fetched here (not only when the Search sheet opens) so a
+  // `?share=minister&name=` deep link can resolve on first render, before
+  // the user ever opens Search themselves.
   const { entries: ministryEntries } = useMinistries();
 
   // Once ministries load, match a pending deep-linked minister name to an
@@ -84,7 +88,7 @@ export default function Home() {
       (e) => e.minister.minister_name?.toLowerCase() === target,
     );
     if (entry) {
-      setSelectedMinistry(entry);
+      setSelectedSearchResult({ tier: "minister", data: entry });
       setPendingMinisterName(null);
     } else {
       setPendingMinisterName(null);
@@ -98,8 +102,8 @@ export default function Home() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["representatives", coords?.latitude, coords?.longitude],
-    queryFn: () => fetchRepresentatives(coords),
+    queryKey: ["cm-location", coords?.latitude, coords?.longitude],
+    queryFn: () => fetchCmLocation(coords),
     enabled: coords !== null,
   });
 
@@ -116,10 +120,10 @@ export default function Home() {
   }, []);
 
   const subject =
-    leaderboardSubject ?? buildSubject(selectedMinistry, data?.mp, ministryEntries);
+    leaderboardSubject ?? buildSubject(selectedSearchResult, data?.cm);
 
   const subjectKey = subject
-    ? `${subject.tier}:${subject.tier === "minister" ? subject.ministry + "|" + subject.name : subject.constituency_key + "|" + subject.name}`
+    ? `${subject.tier}:${subject.tier === "minister" ? subject.ministry + "|" + subject.name : subject.state_key + "|" + subject.name}`
     : "none";
 
   const closeSheet = useCallback(() => setOpenSheet(null), []);
@@ -129,9 +133,19 @@ export default function Home() {
     setTimeout(() => setToast(null), 2200);
   }, []);
 
+  const handleSelectCm = useCallback((cm) => {
+    setLeaderboardSubject(null);
+    setSelectedSearchResult(cm ? { tier: "cm", data: cm } : null);
+  }, []);
+
+  const handleSelectMinister = useCallback((entry) => {
+    setLeaderboardSubject(null);
+    setSelectedSearchResult(entry ? { tier: "minister", data: entry } : null);
+  }, []);
+
   /**
    * Opens a leaderboard row as a full profile, reusing the same
-   * `RepresentativeCard` the home MP/minister uses — no separate modal or
+   * `RepresentativeCard` the home CM/minister uses — no separate modal or
    * simplified view. Only one lookup runs at a time; a second tap while one
    * is in flight is a no-op rather than racing two fetches.
    */
@@ -144,23 +158,16 @@ export default function Home() {
       setPendingTopperKey(key);
 
       try {
-        if (tier === "mp") {
-          const details = await fetchMpByName({
-            name: topper.name,
-            constituencyKey: topper.constituency_key,
-          });
-          if (!details) throw new Error("MP not found");
-          setLeaderboardSubject({
-            tier: "mp",
-            ...details,
-            designation: findMpDesignation(details.name, ministryEntries),
-          });
+        if (tier === "cm") {
+          const details = await fetchCmByStateKey(topper.state_key);
+          if (!details) throw new Error("CM not found");
+          setLeaderboardSubject({ tier: "cm", ...details, isHome: false });
         } else {
           const details = await fetchMinisterByName({
             name: topper.minister_name,
             ministry: topper.ministry,
           });
-          if (!details) throw new Error("Minister not found");
+          if (!details) throw new Error("Union Minister not found");
           const firstFragment = String(details.ministry ?? "")
             .split(";")[0]
             .trim();
@@ -187,7 +194,7 @@ export default function Home() {
         setPendingTopperKey(null);
       }
     },
-    [pendingTopperKey, ministryEntries, showToast],
+    [pendingTopperKey, showToast],
   );
 
   const handleBackFromLeaderboardProfile = useCallback(() => {
@@ -197,7 +204,7 @@ export default function Home() {
   const handleShare = useCallback(
     async (currentChoice) => {
       if (!subject || typeof window === "undefined") return;
-      // A leaderboard-navigated MP isn't the one `coords` points at — sharing
+      // A leaderboard-navigated CM isn't the one `coords` points at — sharing
       // the home location here would silently send the recipient to the
       // wrong person, so it's withheld rather than reused.
       const url = buildShareUrl(subject, leaderboardSubject ? null : coords);
@@ -218,7 +225,7 @@ export default function Home() {
         showToast("Couldn't copy the link. Try again?");
       }
     },
-    [subject, coords, showToast],
+    [subject, coords, leaderboardSubject, showToast],
   );
 
   // The lightweight reward beat after a vote commits — separate from the
@@ -254,8 +261,8 @@ export default function Home() {
 
       {stage === "locating" && (
         <LocatingScreen
-          label="Locating your constituency"
-          detail="Matching your coordinates against parliamentary boundaries."
+          label="Locating your state"
+          detail="Matching your coordinates against state boundaries."
         />
       )}
 
@@ -280,8 +287,8 @@ export default function Home() {
       {stage === "empty" && (
         <ErrorScreen
           overline="No match"
-          title="No seat covers this spot"
-          body="We couldn't match your location to a constituency we hold. Being outside India — or right on a boundary — is the usual reason."
+          title="No state covers this spot"
+          body="We couldn't match your location to a state we hold. Being outside India — or right on a boundary — is the usual reason."
           onRetry={handleAllowLocation}
         />
       )}
@@ -296,15 +303,14 @@ export default function Home() {
           <ResultsHeader
             subject={subject}
             isMinister={subject.tier === "minister"}
-            isViewingOther={Boolean(leaderboardSubject)}
-            onResetToMp={
+            onResetToHome={
               leaderboardSubject
                 ? handleBackFromLeaderboardProfile
-                : subject.tier === "minister"
-                  ? () => setSelectedMinistry(null)
+                : selectedSearchResult
+                  ? () => setSelectedSearchResult(null)
                   : null
             }
-            backLabel={leaderboardSubject ? "← Back" : "← Back to your MP"}
+            backLabel={leaderboardSubject ? "← Back" : "← Back to your CM"}
             onOpenLeaderboard={() => setOpenSheet("leaderboard")}
           />
 
@@ -333,11 +339,17 @@ export default function Home() {
           <SearchSheet
             open={openSheet === "search"}
             onClose={closeSheet}
-            selected={selectedMinistry}
-            onSelect={(entry) => {
-              setLeaderboardSubject(null);
-              setSelectedMinistry(entry);
-            }}
+            defaultTier={subject.tier === "minister" ? "minister" : "cm"}
+            selectedCm={
+              selectedSearchResult?.tier === "cm" ? selectedSearchResult.data : null
+            }
+            selectedMinistry={
+              selectedSearchResult?.tier === "minister"
+                ? selectedSearchResult.data
+                : null
+            }
+            onSelectCm={handleSelectCm}
+            onSelectMinister={handleSelectMinister}
           />
 
           <Toast message={toast} />
@@ -371,16 +383,15 @@ function NameplateBorder() {
 function ResultsHeader({
   subject,
   isMinister,
-  isViewingOther = false,
-  onResetToMp,
-  backLabel = "← Back to your MP",
+  onResetToHome,
+  backLabel = "← Back to your CM",
   onOpenLeaderboard,
 }) {
-  // Viewing someone else via the leaderboard always shows the back button in
-  // this slot instead — the constituency badge would otherwise displace it
-  // whenever the tapped row happens to be another MP.
+  // The state badge only ever applies to the actual home CM (resolved from
+  // the user's own location) — a minister, a searched-in CM, or a
+  // leaderboard-navigated CM all show the back button in this slot instead.
   const location =
-    isMinister || isViewingOther ? null : titleCase(subject.constituency ?? "");
+    subject.tier === "cm" && subject.isHome ? titleCase(subject.state ?? "") : null;
 
   return (
     <motion.header
@@ -397,10 +408,10 @@ function ResultsHeader({
             <NameplateBorder />
             <span className="relative">{location}</span>
           </span>
-        ) : onResetToMp ? (
+        ) : onResetToHome ? (
           <button
             type="button"
-            onClick={onResetToMp}
+            onClick={onResetToHome}
             className={`${NAMEPLATE_CLASS} text-muted transition-colors hover:text-ink`}
           >
             <NameplateBorder />
@@ -478,7 +489,7 @@ function FloatingSearchButton({ onClick }) {
             transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
             className="hidden rounded-full border border-rule bg-surface px-3.5 py-2 text-xs font-medium text-ink shadow-card sm:inline-block"
           >
-            Search any minister
+            Search any leader
           </motion.span>
         )}
       </AnimatePresence>
@@ -506,7 +517,7 @@ function FloatingSearchButton({ onClick }) {
         }}
         whileHover={{ scale: 1.08, y: -2 }}
         whileTap={{ scale: 0.95 }}
-        aria-label="Search another MP or Minister"
+        aria-label="Search another Chief Minister or Union Minister"
         className="flex size-16 items-center justify-center rounded-full bg-ink text-paper shadow-lift transition-colors hover:bg-laurel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         <Search className="size-6" strokeWidth={2.25} />
@@ -553,7 +564,7 @@ function buildShareUrl(subject, coords) {
   if (typeof window === "undefined") return "";
   const origin = window.location.origin;
   const params = new URLSearchParams({ share: subject.tier });
-  if (subject.tier === "mp" && coords) {
+  if (subject.tier === "cm" && coords) {
     params.set("lat", String(coords.latitude));
     params.set("lng", String(coords.longitude));
   } else if (subject.tier === "minister") {
@@ -563,30 +574,15 @@ function buildShareUrl(subject, coords) {
 }
 
 /**
- * An MP's own record has no ministry field — most aren't in the union
- * council at all. Cross-referencing the already-fetched ministries list by
- * name (client-side, no backend change) tells us the ones who are, using
- * each fragment's raw portfolio text ("Minister of Housing and Urban
- * Affairs") rather than the cleaned search label. The PM's row carries many
- * fragments from a long prose blob, so that case just says "Prime Minister"
- * instead of joining all of them into a wall of text.
+ * Resolves the subject to display, highest priority first: a search-picked
+ * minister, a search-picked CM, then the home CM (resolved from location).
+ * A CM's designation ("Chief Minister of X") is already a plain stored
+ * string — unlike an MP, there's no cross-referencing needed to work out
+ * whether this person also holds another office.
  */
-function findMpDesignation(mpName, ministryEntries) {
-  const fallback = "Member of Parliament";
-  if (!mpName || !ministryEntries?.length) return fallback;
-
-  const target = mpName.toLowerCase();
-  const matches = ministryEntries.filter(
-    (entry) => entry.minister.minister_name?.toLowerCase() === target,
-  );
-  if (matches.length === 0) return fallback;
-  if (matches[0].rank === "Prime Minister") return "Prime Minister";
-  return matches.map((entry) => entry.portfolio).join(" & ");
-}
-
-function buildSubject(selectedMinistry, mp, ministryEntries) {
-  if (selectedMinistry) {
-    const entry = selectedMinistry;
+function buildSubject(selectedSearchResult, homeCm) {
+  if (selectedSearchResult?.tier === "minister") {
+    const entry = selectedSearchResult.data;
     const m = entry.minister;
     return {
       tier: "minister",
@@ -604,13 +600,11 @@ function buildSubject(selectedMinistry, mp, ministryEntries) {
       designation: entry.portfolio || entry.label,
     };
   }
-  if (mp) {
-    return {
-      tier: "mp",
-      ...mp,
-      isHome: true,
-      designation: findMpDesignation(mp.name, ministryEntries),
-    };
+  if (selectedSearchResult?.tier === "cm") {
+    return { tier: "cm", ...selectedSearchResult.data, isHome: false };
+  }
+  if (homeCm) {
+    return { tier: "cm", ...homeCm, isHome: true };
   }
   return null;
 }

@@ -23,7 +23,7 @@ const INITIAL_POINTS = 3;
 
 /**
  * The Information bottom sheet — everything about the current representative
- * that isn't identity: party, seat particulars, criminal cases, manifesto.
+ * that isn't identity: party, state or portfolio, manifesto/commitments.
  */
 export function InfoSheet({ open, onClose, subject }) {
   const [showAll, setShowAll] = useState(false);
@@ -56,18 +56,7 @@ export function InfoSheet({ open, onClose, subject }) {
             )}
           </>
         ) : (
-          <>
-            <Fact
-              term="Constituency"
-              value={titleCase(subject.constituency) || "Not on record"}
-            />
-            <Fact term="Education" value={orNull(subject.education) || "Not on record"} />
-            <Fact
-              term="Criminal cases"
-              value={<CriminalCases value={subject.criminal_cases} />}
-              last
-            />
-          </>
+          <Fact term="State" value={titleCase(subject.state) || "Not on record"} last />
         )}
       </dl>
 
@@ -75,7 +64,7 @@ export function InfoSheet({ open, onClose, subject }) {
         <section className="mt-8">
           <div className="flex items-baseline gap-3">
             <h3 className="eyebrow text-ink">
-              {isMinister ? "Minister's commitments" : "Party manifesto"}
+              {isMinister ? "Union Minister's commitments" : "Chief Minister's commitments"}
             </h3>
             <span className="h-px flex-1 bg-rule" />
             {party && <span className="text-[11px] text-muted">{party}</span>}
@@ -139,8 +128,3 @@ function Fact({ term, value, last = false }) {
   );
 }
 
-function CriminalCases({ value }) {
-  if (value === null || value === undefined) return "Not on record";
-  if (value === 0) return "None declared";
-  return <span className="text-slap">{value} declared</span>;
-}
