@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "framer-motion";
 import { useState } from "react";
 
 export function Providers({ children }) {
@@ -20,6 +21,15 @@ export function Providers({ children }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {/*
+       * `reducedMotion="user"` makes every motion component in the tree honour
+       * the OS setting without each one having to ask: transform and layout
+       * animations are dropped, opacity is kept. The CSS block in globals.css
+       * only reaches CSS transitions/animations, so this is what covers the
+       * springs, the idle float and the entrance stagger.
+       */}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+    </QueryClientProvider>
   );
 }

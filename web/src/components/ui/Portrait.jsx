@@ -28,7 +28,7 @@ export function Portrait({ src, name, className = "" }) {
 
   return (
     <div
-      className={`aspect-[3/4] shrink-0 overflow-hidden rounded-photo border border-rule bg-paper ${className}`}
+      className={`aspect-[3/4] shrink-0 overflow-hidden rounded-photo bg-surface-2 shadow-card ring-1 ring-ink/5 ${className}`}
     >
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element -- see note above
@@ -44,7 +44,7 @@ export function Portrait({ src, name, className = "" }) {
       ) : (
         <span
           aria-hidden
-          className="flex size-full items-center justify-center font-serif text-3xl text-faint"
+          className="flex size-full items-center justify-center font-display text-3xl font-bold text-faint"
         >
           {monogramOf(name)}
         </span>

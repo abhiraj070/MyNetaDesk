@@ -1,17 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
-import { Search, Trophy } from "lucide-react";
+import { useCallback, useState } from "react";
 
+import { BottomActions } from "@/components/BottomActions";
 import { InfoSheet } from "@/components/InfoSheet";
 import { Landing } from "@/components/Landing";
 import { LeaderboardSheet } from "@/components/LeaderboardSheet";
-import { Ornament } from "@/components/Ornament";
 import { RepresentativeCard } from "@/components/RepresentativeCard";
 import { SearchSheet } from "@/components/SearchSheet";
 import { ErrorScreen, LocatingScreen } from "@/components/StatusScreens";
+import { TodaysHighlight } from "@/components/TodaysHighlight";
 import { useMinistries } from "@/hooks/useMinistries";
 import {
   fetchCmByStateKey,
@@ -25,6 +26,7 @@ import {
   requestPosition,
 } from "@/lib/geolocation";
 import { rankOf } from "@/lib/ministries";
+import { rise, SPRING_POP } from "@/lib/motion";
 
 const RANK_ORDER = {
   "Prime Minister": 0,
@@ -38,10 +40,15 @@ const RANK_ORDER = {
  * Chief Minister page for those coordinates without prompting for location
  * again; `?share=minister&name=` seeds the pending minister name so we can
  * pick their entry once the ministries list loads.
+ *
+ * Fed by `useSearchParams()` rather than by reading `window.location` here.
+ * Reading `window` used to make the first client render disagree with the
+ * server-rendered HTML on any `?share=` URL (server: the landing screen,
+ * client: the locating screen), which React reported as a hydration failure
+ * and recovered from by throwing the whole tree away and re-rendering. The
+ * hook has no server/client split to disagree about.
  */
-function readDeepLink() {
-  if (typeof window === "undefined") return { coords: null, ministerName: null };
-  const params = new URLSearchParams(window.location.search);
+function readDeepLink(params) {
   const share = params.get("share");
   if (share === "cm") {
     const lat = parseFloat(params.get("lat"));
@@ -55,8 +62,10 @@ function readDeepLink() {
   return { coords: null, ministerName: null };
 }
 
-export default function Home() {
-  const [coords, setCoords] = useState(() => readDeepLink().coords);
+export function Home() {
+  const deepLink = readDeepLink(useSearchParams());
+
+  const [coords, setCoords] = useState(deepLink.coords);
   const [geoError, setGeoError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
   const [openSheet, setOpenSheet] = useState(null); // "info" | "leaderboard" | "search" | null
@@ -68,10 +77,15 @@ export default function Home() {
   // overrides whatever else is on screen until the user backs out of it.
   const [leaderboardSubject, setLeaderboardSubject] = useState(null);
   const [pendingTopperKey, setPendingTopperKey] = useState(null);
-  const [lastChoice, setLastChoice] = useState(null); // "slap" | "rose" | null — drives the share copy and CTA highlight
+  // The last verdict cast, tagged with the subject it was cast on:
+  // `{ key, choice }`. Share now lives in the bottom bar rather than inside
+  // the card, so it no longer remounts when the subject changes — carrying the
+  // key is what stops the share text from crediting a verdict cast on someone
+  // else (and stops Share keeping its "you just voted" highlight).
+  const [lastVote, setLastVote] = useState(null);
   const [toast, setToast] = useState(null);
   const [pendingMinisterName, setPendingMinisterName] = useState(
-    () => readDeepLink().ministerName,
+    deepLink.ministerName,
   );
 
   // Pre-fetched here (not only when the Search sheet opens) so a
@@ -125,6 +139,8 @@ export default function Home() {
   const subjectKey = subject
     ? `${subject.tier}:${subject.tier === "minister" ? subject.ministry + "|" + subject.name : subject.state_key + "|" + subject.name}`
     : "none";
+
+  const lastChoice = lastVote?.key === subjectKey ? lastVote.choice : null;
 
   const closeSheet = useCallback(() => setOpenSheet(null), []);
 
@@ -232,14 +248,14 @@ export default function Home() {
   // in-flight "winding" banner, which clears before the tally ever lands.
   const handleVoteCast = useCallback(
     (next) => {
-      setLastChoice(next);
+      setLastVote({ key: subjectKey, choice: next });
       showToast(
         next === "slap"
           ? "👋 Another slap recorded."
           : "🌹 One more rose added.",
       );
     },
-    [showToast],
+    [subjectKey, showToast],
   );
 
   const stage = resolveStage({
@@ -294,15 +310,11 @@ export default function Home() {
       )}
 
       {stage === "results" && subject && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-          className="mx-auto w-full max-w-3xl px-5 pt-6 pb-10 sm:px-8 sm:pt-8 sm:pb-14"
+        <div
+          className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-3 px-4 pt-2 sm:px-6 sm:pt-3"
         >
           <ResultsHeader
             subject={subject}
-            isMinister={subject.tier === "minister"}
             onResetToHome={
               leaderboardSubject
                 ? handleBackFromLeaderboardProfile
@@ -311,17 +323,28 @@ export default function Home() {
                   : null
             }
             backLabel={leaderboardSubject ? "← Back" : "← Back to your CM"}
-            onOpenLeaderboard={() => setOpenSheet("leaderboard")}
           />
 
           <RepresentativeCard
             key={subjectKey}
             subject={subject}
             keySeed={subjectKey}
-            onOpenInfo={() => setOpenSheet("info")}
-            onShare={() => handleShare(lastChoice)}
             onFirstVote={handleVoteCast}
           />
+
+          <motion.div {...rise(0.18)}>
+            <TodaysHighlight />
+          </motion.div>
+
+          <motion.div {...rise(0.24)} className="sticky bottom-0 z-30">
+            <BottomActions
+              onOpenSearch={() => setOpenSheet("search")}
+              onOpenLeaderboard={() => setOpenSheet("leaderboard")}
+              onOpenInfo={() => setOpenSheet("info")}
+              onShare={() => handleShare(lastChoice)}
+              shareHighlight={Boolean(lastChoice)}
+            />
+          </motion.div>
 
           <InfoSheet
             open={openSheet === "info"}
@@ -353,41 +376,31 @@ export default function Home() {
           />
 
           <Toast message={toast} />
-
-          <FloatingSearchButton onClick={() => setOpenSheet("search")} />
-        </motion.div>
+        </div>
       )}
     </main>
   );
 }
 
+const CHIP_CLASS =
+  "inline-flex max-w-[60%] items-center gap-1.5 truncate rounded-full bg-surface px-3.5 py-1.5 font-display text-xs font-semibold text-ink shadow-card ring-1 ring-ink/5";
+
 /**
- * The nameplate look: rectangular rather than a full pill, a muted brass
- * hairline border with a second inset line just inside it (the classic
- * engraved-plaque double rule), and a faint top-to-bottom gradient for a
- * touch of dimension. Deliberately no extra glyphs or corner flourishes —
- * the double border already reads as "plaque" without adding clutter.
+ * A single-line app bar, not a masthead. The old header carried a 3xl/4xl
+ * headline, an ornament and a subtitle — roughly the top 40% of the first
+ * screen — which pushed the representative (the actual subject of the page)
+ * below the fold. Everything here now fits on one row so the card can be the
+ * first thing seen.
+ *
+ * Leaderboard moved out of this bar and into the bottom action row, alongside
+ * the other three secondary actions.
  */
-const NAMEPLATE_CLASS =
-  "relative inline-flex items-center gap-1.5 rounded-[10px] border border-[#c9a869]/50 bg-gradient-to-b from-white to-[#faf3e6] px-4 py-2 text-[11px] leading-none font-medium tracking-[0.14em] text-ink uppercase shadow-card";
-
-function NameplateBorder() {
-  return (
-    <span
-      aria-hidden
-      className="pointer-events-none absolute inset-[3px] rounded-[7px] border border-[#c9a869]/25"
-    />
-  );
-}
-
 function ResultsHeader({
   subject,
-  isMinister,
   onResetToHome,
   backLabel = "← Back to your CM",
-  onOpenLeaderboard,
 }) {
-  // The state badge only ever applies to the actual home CM (resolved from
+  // The state chip only ever applies to the actual home CM (resolved from
   // the user's own location) — a minister, a searched-in CM, or a
   // leaderboard-navigated CM all show the back button in this slot instead.
   const location =
@@ -395,134 +408,28 @@ function ResultsHeader({
 
   return (
     <motion.header
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
-      className="mb-6 sm:mb-8"
+      {...rise(0)}
+      className="flex shrink-0 items-center justify-between gap-3"
     >
-      {/* Global top bar: location on the left, Leaderboard as a screen-level
-          action on the right — not tucked inside the card below. */}
-      <div className="flex items-center justify-between gap-3">
-        {location ? (
-          <span className={NAMEPLATE_CLASS}>
-            <NameplateBorder />
-            <span className="relative">{location}</span>
-          </span>
-        ) : onResetToHome ? (
-          <button
-            type="button"
-            onClick={onResetToHome}
-            className={`${NAMEPLATE_CLASS} text-muted transition-colors hover:text-ink`}
-          >
-            <NameplateBorder />
-            <span className="relative">{backLabel}</span>
-          </button>
-        ) : (
-          <span aria-hidden />
-        )}
+      <p className="flex items-center gap-1.5 font-display text-base font-bold tracking-tight text-ink">
+        <span aria-hidden>👋</span>
+        Slap Your Leader
+      </p>
 
-        <motion.button
+      {location ? (
+        <span className={CHIP_CLASS}>{location}</span>
+      ) : onResetToHome ? (
+        <button
           type="button"
-          onClick={onOpenLeaderboard}
-          whileHover={{ y: -1 }}
-          whileTap={{ y: 1, scale: 0.96 }}
-          transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
-          className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-semibold tracking-[0.05em] text-paper uppercase shadow-card transition-colors hover:bg-slap"
+          onClick={onResetToHome}
+          className={`${CHIP_CLASS} text-muted transition-colors hover:text-ink`}
         >
-          <Trophy className="size-3.5" strokeWidth={2} />
-          Leaderboard
-        </motion.button>
-      </div>
-
-      <div className="text-center">
-        <h1 className="mt-6 font-serif text-3xl leading-[1.05] text-balance sm:text-4xl">
-          {isMinister ? (
-            <>
-              They serve <span className="text-laurel">the country</span>.{" "}
-              <span className="text-slap">Judge</span> the service.
-            </>
-          ) : (
-            <>
-              They work for <span className="text-laurel">you</span>.{" "}
-              <span className="text-slap">Judge</span> the work.
-            </>
-          )}
-        </h1>
-
-        <div className="mt-4">
-          <Ornament />
-        </div>
-
-        <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted text-pretty">
-          Read their record. Then slap or rose them.
-        </p>
-      </div>
+          {backLabel}
+        </button>
+      ) : (
+        <span aria-hidden />
+      )}
     </motion.header>
-  );
-}
-
-/**
- * Always-visible floating entry point into the Search sheet — discoverable
- * from the moment a subject is on screen, not just after a vote. Filled dark
- * so it reads as a primary action against the paper background (the earlier
- * quiet/outline treatment blended in too much to notice), with a slow
- * breathing glow so it stays noticeable without competing for attention the
- * way Share's faster reward pulse does once a vote lands. The helper label
- * teaches the gesture once per visit, then gets out of the way.
- */
-function FloatingSearchButton({ onClick }) {
-  const [showHint, setShowHint] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowHint(false), 9000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <div className="fixed right-5 bottom-6 z-30 flex items-center gap-2.5 sm:right-8">
-      <AnimatePresence>
-        {showHint && (
-          <motion.span
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 8 }}
-            transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-            className="hidden rounded-full border border-rule bg-surface px-3.5 py-2 text-xs font-medium text-ink shadow-card sm:inline-block"
-          >
-            Search any leader
-          </motion.span>
-        )}
-      </AnimatePresence>
-
-      <motion.button
-        type="button"
-        onClick={() => {
-          setShowHint(false);
-          onClick();
-        }}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{
-          opacity: 1,
-          scale: [1, 1.05, 1],
-          boxShadow: [
-            "0 0 0 0 rgb(47 107 74 / 0)",
-            "0 0 0 10px rgb(47 107 74 / 0.14)",
-            "0 0 0 0 rgb(47 107 74 / 0)",
-          ],
-        }}
-        transition={{
-          opacity: { duration: 0.3, ease: [0.2, 0, 0, 1] },
-          scale: { duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 1 },
-          boxShadow: { duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 1 },
-        }}
-        whileHover={{ scale: 1.08, y: -2 }}
-        whileTap={{ scale: 0.95 }}
-        aria-label="Search another Chief Minister or Union Minister"
-        className="flex size-16 items-center justify-center rounded-full bg-ink text-paper shadow-lift transition-colors hover:bg-laurel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-      >
-        <Search className="size-6" strokeWidth={2.25} />
-      </motion.button>
-    </div>
   );
 }
 
@@ -532,11 +439,11 @@ function Toast({ message }) {
       {message && (
         <motion.div
           role="status"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 12 }}
-          transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-rule bg-ink px-4 py-2 text-sm text-paper shadow-lift"
+          initial={{ opacity: 0, y: 16, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          transition={SPRING_POP}
+          className="fixed bottom-24 left-1/2 z-50 max-w-[92vw] -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-center font-display text-sm font-semibold whitespace-nowrap text-white shadow-lift"
         >
           {message}
         </motion.div>

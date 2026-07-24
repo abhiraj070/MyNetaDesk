@@ -121,7 +121,7 @@ export function MinistryCombobox({ entries, selected, onSelect, onClear }) {
     <div ref={rootRef} className="relative">
       <div
         className={`flex items-center gap-2.5 rounded-control border bg-surface px-3.5 transition-colors ${
-          open ? "border-ink" : "border-rule"
+          open ? "border-brand" : "border-rule"
         }`}
       >
         <Search className="size-4 shrink-0 text-muted" strokeWidth={2} />
@@ -230,7 +230,7 @@ function Option({ id, entry, query, active, selected, onPick, onHover }) {
       }}
       onMouseMove={onHover}
       className={`cursor-pointer border-b border-rule px-3.5 py-2.5 last:border-b-0 ${
-        active ? "bg-paper" : ""
+        active ? "bg-brand-wash" : ""
       }`}
     >
       <div className="flex items-baseline gap-3">

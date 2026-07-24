@@ -24,7 +24,7 @@ export function VoteAnnouncement({ message }) {
           transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
           className="pointer-events-none fixed inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center px-6"
         >
-          <span className="rounded-card border border-rule bg-surface/95 px-7 py-5 text-center font-serif text-xl leading-snug text-balance text-ink shadow-card backdrop-blur-sm sm:text-2xl">
+          <span className="rounded-card bg-surface/95 px-7 py-5 text-center font-display text-xl leading-snug font-bold text-balance text-ink shadow-lift ring-1 ring-ink/5 backdrop-blur-sm sm:text-2xl">
             {message}
           </span>
         </motion.div>

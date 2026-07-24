@@ -2,27 +2,25 @@
 
 import { motion } from "framer-motion";
 
+import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
+import { SPRING_ENTRANCE, SPRING_POP } from "@/lib/motion";
 
 const container = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 8 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.28, ease: [0.2, 0, 0, 1] },
-  },
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: SPRING_ENTRANCE },
 };
 
 const PROMISES = [
-  "Name, party, and their office",
-  "Their record, in plain terms",
-  "Party commitments, where we have them",
-  "A slap or a rose — one side each",
+  { emoji: "🪪", text: "Name, party, and their office" },
+  { emoji: "📜", text: "Their record, in plain terms" },
+  { emoji: "🤞", text: "Party commitments, where we have them" },
+  { emoji: "⚖️", text: "A slap or a rose — one side each" },
 ];
 
 export function Landing({ onAllowLocation, isBusy }) {
@@ -31,23 +29,27 @@ export function Landing({ onAllowLocation, isBusy }) {
       variants={container}
       initial="hidden"
       animate="show"
-      className="mx-auto grid w-full max-w-5xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14 lg:py-24"
+      className="mx-auto grid w-full max-w-5xl gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-14 lg:py-24"
     >
       <div>
-        <motion.p variants={item} className="eyebrow">
-          Verdicts · India
-        </motion.p>
+        <motion.div variants={item}>
+          <Badge emoji="⚡" label="Verdicts · India" tone="brand" size="sm" tilt />
+        </motion.div>
 
         <motion.h1
           variants={item}
-          className="mt-3 font-serif text-5xl leading-[1.02] text-balance sm:text-6xl lg:text-7xl"
+          className="mt-4 font-display text-5xl leading-[0.98] font-bold text-balance sm:text-6xl lg:text-7xl"
         >
-          Slap or Rose? <span className="text-slap">You decide.</span>
+          Slap or Rose?
+          <br />
+          <span className="bg-linear-to-r from-slap via-slap to-brand bg-clip-text text-transparent">
+            You decide.
+          </span>
         </motion.h1>
 
         <motion.p
           variants={item}
-          className="mt-5 max-w-md text-lg leading-relaxed text-muted text-pretty"
+          className="mt-5 max-w-md text-lg leading-relaxed font-medium text-muted text-pretty"
         >
           Read what they promised. Then decide if they deserve a 👋 or 🌹.
         </motion.p>
@@ -57,25 +59,35 @@ export function Landing({ onAllowLocation, isBusy }) {
           className="mt-8 flex flex-wrap items-center gap-4"
         >
           <Button onClick={onAllowLocation} disabled={isBusy}>
-            Who&apos;s mine? →
+            {isBusy ? "Finding you…" : "Who's mine? →"}
           </Button>
-          <span className="text-xs text-muted">Read once. Never stored.</span>
+          <span className="text-xs font-semibold text-faint">
+            Read once. Never stored.
+          </span>
         </motion.div>
       </div>
 
       <motion.div
         variants={item}
-        className="lg:border-l lg:border-rule lg:pl-10"
+        className="rounded-card bg-surface p-5 shadow-card ring-1 ring-ink/5 sm:p-6"
       >
-        <p className="eyebrow">What you&apos;ll see</p>
-        <ul className="mt-3">
+        <p className="font-display text-sm font-bold text-ink">
+          What you&apos;ll see
+        </p>
+
+        <ul className="mt-3 space-y-2">
           {PROMISES.map((promise) => (
-            <li
-              key={promise}
-              className="border-b border-rule py-2.5 text-sm last:border-b-0"
+            <motion.li
+              key={promise.text}
+              whileHover={{ x: 4 }}
+              transition={SPRING_POP}
+              className="flex items-center gap-3 rounded-control bg-surface-2 px-3.5 py-3 text-sm font-semibold text-ink"
             >
-              {promise}
-            </li>
+              <span aria-hidden className="text-base leading-none">
+                {promise.emoji}
+              </span>
+              {promise.text}
+            </motion.li>
           ))}
         </ul>
       </motion.div>

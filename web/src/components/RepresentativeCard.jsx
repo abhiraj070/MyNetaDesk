@@ -2,14 +2,15 @@
 
 import { motion } from "framer-motion";
 import { useRef } from "react";
-import { Info, Share2 } from "lucide-react";
 
 import { VoteAnnouncement } from "./vote/VoteAnnouncement";
 import { VoteFlight } from "./vote/VoteFlight";
 import { VotePortrait } from "./vote/VotePortrait";
 import { VoteButtons } from "./VoteButtons";
+import { Badge, BADGES } from "./ui/Badge";
 import { useVote } from "@/hooks/useVote";
 import { useVoteChoreography } from "@/hooks/useVoteChoreography";
+import { rise, SPRING_ENTRANCE, SPRING_POP } from "@/lib/motion";
 
 const ROLE_LABEL = {
   // Only the home CM (resolved from the user's own location) is "yours" —
@@ -20,82 +21,120 @@ const ROLE_LABEL = {
 };
 
 /**
- * The slim representative card: portrait, name, designation, and the vote
- * controls. All other information lives behind the Information bottom sheet.
+ * The hero block: the representative's card, with the verdict controls sitting
+ * directly beneath it as their own section rather than inside the card — so the
+ * card is one clear object and the buttons read as the page's primary action.
+ *
+ * The outer element is still the choreography *stage*: it's the positioning
+ * context for the projectile flight, and `measure()` reads the portrait and
+ * button rects relative to it. Both therefore have to stay inside this wrapper,
+ * whatever the layout does around them.
+ *
+ * Information and Share moved out to the page's bottom action bar; everything
+ * that isn't identity still lives behind the Information bottom sheet.
  */
-export function RepresentativeCard({
-  subject,
-  keySeed,
-  onOpenInfo,
-  onShare,
-  onFirstVote,
-}) {
+export function RepresentativeCard({ subject, keySeed, onFirstVote }) {
   const stageRef = useRef(null);
   const portraitRef = useRef(null);
   const buttonsRef = useRef({});
 
-  const { choice, casts, vote, isError } = useVote(subject.tier, subject);
+  const { choice, slaps, roses, vote, isError } = useVote(subject.tier, subject);
   const choreo = useVoteChoreography({ stageRef, portraitRef, buttonsRef });
-
-  const slaps = (subject.slap_count ?? 0) + (choice === "slap" ? casts : 0);
-  const roses = (subject.rose_count ?? 0) + (choice === "rose" ? casts : 0);
 
   const role = ROLE_LABEL[subject.tier]?.(subject);
 
   return (
-    <motion.article
-      key={keySeed}
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.32, delay: 0.08, ease: [0.2, 0, 0, 1] }}
-      ref={stageRef}
-      className="relative overflow-visible rounded-card bg-surface p-7 shadow-lift transition-shadow duration-300 sm:p-10"
-    >
-      {onOpenInfo && (
-        <div className="absolute top-4 left-4 sm:top-5 sm:left-5">
-          <IconAction label="Information" onClick={onOpenInfo} icon={Info} />
-        </div>
-      )}
-      {onShare && (
-        <div className="absolute top-4 right-4 sm:top-5 sm:right-5">
-          <IconAction
-            label="Share"
-            onClick={onShare}
-            icon={Share2}
-            highlight={Boolean(choice)}
+    <div ref={stageRef} className="relative flex min-h-0 flex-1 flex-col gap-3">
+      {/*
+       * Two layers, each owning exactly one transform: this wrapper carries the
+       * CSS idle float (see `.hero-float` in globals.css) and never remounts,
+       * while the `article` inside owns the entrance and the hover lift and is
+       * keyed on the subject so it re-plays whenever the card swaps. Stacking
+       * both on one element means two animations fighting over the same
+       * `transform`, and the loser is always the loop.
+       *
+       * The drift keeps running through a verdict. The choreography measures
+       * the portrait at launch and the projectile is positioned against the
+       * stage, so a flight can land up to ~3px off where the card has drifted
+       * to by impact — well inside the visual noise of a 1.8x-scaled glyph.
+       */}
+      <div className="hero-float flex min-h-0 flex-1 flex-col">
+        {/* `min-h-[56dvh]` is what makes the representative the hero: it holds
+            the card at roughly 55% of the first screen no matter how short the
+            name or designation runs, and `flex-1` lets it take any space left
+            over on a taller viewport rather than leaving a gap. */}
+        <motion.article
+          key={keySeed}
+          initial={{ opacity: 0, y: 18, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.98 }}
+          transition={{ ...SPRING_ENTRANCE, delay: 0.05 }}
+          whileHover={{ y: -7, transition: SPRING_POP }}
+          className="relative flex min-h-[56dvh] flex-1 flex-col items-center justify-center overflow-visible rounded-card bg-surface px-5 py-6 text-center shadow-hero sm:px-8 sm:py-8"
+        >
+          {/* Featured framing: a soft brand-to-slap wash bleeding down from the
+              top of the card, and the sticker pinned over its corner. Both are
+              decoration — they sit behind/above the content, never in its flow,
+              so the card's measured height is unchanged. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-2/5 rounded-t-card bg-linear-to-b from-brand-wash/70 via-brand-wash/20 to-transparent"
           />
-        </div>
-      )}
 
-      <div className="flex flex-col items-center text-center">
-        <motion.div whileHover={{ scale: 1.03 }} transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}>
-          <VotePortrait
-            src={subject.photo_url}
-            name={subject.name}
-            className="w-36 sm:w-44"
-            portraitRef={portraitRef}
-            controls={choreo.portraitControls}
-            showSlapMark={choreo.showSlapMark}
-            showBloom={choreo.showBloom}
-            direction={choreo.impactDirection}
+          <Badge
+            {...BADGES.featured}
+            tilt
+            size="sm"
+            className="absolute -top-2.5 left-4 shadow-card sm:left-6"
           />
-        </motion.div>
 
-        <p className="eyebrow mt-6">{role}</p>
+          <motion.div
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.98 }}
+            transition={SPRING_POP}
+            className="relative"
+          >
+            {/* Halo behind the portrait — the "lit from behind" cue that makes
+                the person read as the subject of the page, not an illustration
+                of one. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-[-14%] rounded-full bg-brand/20 blur-2xl"
+            />
 
-        <h2 className="mt-2 font-serif text-3xl leading-tight text-balance text-ink sm:text-4xl">
-          {subject.name}
-        </h2>
+            <VotePortrait
+              src={subject.photo_url}
+              name={subject.name}
+              className="relative w-[46vw] max-w-[12.5rem] sm:w-52"
+              portraitRef={portraitRef}
+              controls={choreo.portraitControls}
+              showSlapMark={choreo.showSlapMark}
+              showBloom={choreo.showBloom}
+              direction={choreo.impactDirection}
+            />
+          </motion.div>
 
-        {subject.designation && (
-          <p className="mt-2 text-base font-medium text-ink/80 text-balance">
-            {subject.designation}
-          </p>
-        )}
+          <Badge tone="brand" size="sm" className="relative mt-5">
+            {role}
+          </Badge>
+
+          <h2 className="relative mt-2 font-display text-[1.75rem] leading-[1.1] font-bold text-balance text-ink sm:text-4xl">
+            {subject.name}
+          </h2>
+
+          {subject.designation && (
+            <p className="relative mt-1.5 max-w-sm text-sm font-semibold text-balance text-muted sm:text-base">
+              {subject.designation}
+            </p>
+          )}
+        </motion.article>
       </div>
 
-      <div className="mx-auto mt-9 max-w-md">
+      <motion.section
+        aria-label="Your verdict"
+        {...rise(0.12)}
+        className="mx-auto w-full max-w-md shrink-0"
+      >
         <VoteButtons
           choice={choice}
           slapCount={slaps}
@@ -110,54 +149,10 @@ export function RepresentativeCard({
           busy={choreo.isBusy}
           buttonsRef={buttonsRef}
         />
-      </div>
+      </motion.section>
 
       <VoteFlight flight={choreo.flight} />
       <VoteAnnouncement message={choreo.message} />
-    </motion.article>
-  );
-}
-
-/**
- * Circular icon button — consistent size, hover, and press for anything that
- * needs to sit in a card corner or a floating context.
- *
- * `highlight` turns it into the reward beat for whatever just happened (the
- * Share button once a vote lands): filled accent + a soft looping pulse ring,
- * echoing the ring already used elsewhere (Ornament) rather than introducing
- * a new motion pattern.
- */
-export function IconAction({
-  label,
-  onClick,
-  icon: Icon,
-  size = "md",
-  highlight = false,
-}) {
-  const dimensions = size === "lg" ? "size-14" : "size-10";
-  const iconSize = size === "lg" ? "size-6" : "size-4";
-
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      whileHover={{ scale: 1.08 }}
-      whileTap={{ scale: 0.94 }}
-      transition={{ type: "spring", stiffness: 420, damping: 22 }}
-      className={`relative ${dimensions} flex shrink-0 items-center justify-center rounded-full shadow-card transition-shadow hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
-        highlight ? "bg-slap text-paper" : "bg-surface text-ink hover:text-slap"
-      }`}
-    >
-      {highlight && (
-        <motion.span
-          aria-hidden
-          className="absolute inset-0 rounded-full border border-slap"
-          animate={{ scale: [1, 1.35, 1], opacity: [0.6, 0, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
-        />
-      )}
-      <Icon className={iconSize} strokeWidth={2} />
-    </motion.button>
+    </div>
   );
 }

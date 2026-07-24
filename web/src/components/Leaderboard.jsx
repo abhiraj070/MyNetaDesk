@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useId, useState } from "react";
 
 import { useLeaderboard } from "@/hooks/useLeaderboard";
+import { SPRING_POP } from "@/lib/motion";
 import { toFriendlyError } from "@/lib/api";
 
 const TIER_COPY = {
@@ -114,7 +115,7 @@ function TierBoard({ tier, board, highlightName, onSelectTopper, pendingKey }) {
               type="button"
               onClick={() => query.fetchNextPage()}
               disabled={query.isFetchingNextPage}
-              className="mt-3 w-full rounded-control border border-rule py-2.5 text-xs font-medium tracking-[0.05em] text-ink uppercase transition-colors hover:border-ink disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-3 w-full rounded-full bg-surface-2 py-3 font-display text-sm font-semibold text-brand-strong ring-1 ring-ink/5 transition-colors hover:bg-brand-wash disabled:cursor-not-allowed disabled:opacity-60"
             >
               {query.isFetchingNextPage ? "Loading…" : "Load more"}
             </button>
@@ -134,7 +135,7 @@ export function PillTabs({ options, value, onChange, ariaLabel }) {
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="relative inline-flex shrink-0 rounded-control border border-rule bg-paper p-0.5"
+      className="relative inline-flex shrink-0 rounded-full bg-surface-2 p-1 ring-1 ring-ink/5"
     >
       {options.map((option) => {
         const isActive = value === option.value;
@@ -145,7 +146,7 @@ export function PillTabs({ options, value, onChange, ariaLabel }) {
             type="button"
             aria-selected={isActive}
             onClick={() => onChange(option.value)}
-            className="relative z-10 flex items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="relative z-10 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-display text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             style={{ color: isActive ? "var(--color-ink)" : "var(--color-muted)" }}
           >
             {option.emoji && <span aria-hidden>{option.emoji}</span>}
@@ -155,7 +156,7 @@ export function PillTabs({ options, value, onChange, ariaLabel }) {
                 layoutId={pillId}
                 aria-hidden
                 transition={{ type: "spring", stiffness: 400, damping: 34 }}
-                className="absolute inset-0 -z-10 rounded-[6px] bg-surface shadow-card"
+                className="absolute inset-0 -z-10 rounded-full bg-surface shadow-card"
               />
             )}
           </button>
@@ -211,10 +212,10 @@ function TopperList({ toppers, tier, board, highlightName, onSelectTopper, pendi
                 onClick={() => onSelectTopper?.(tier, topper)}
                 disabled={!onSelectTopper || isPending}
                 aria-label={`View ${name}'s profile`}
-                className={`flex w-full items-center gap-3 rounded-card border px-3 py-2.5 text-left transition-colors disabled:cursor-wait ${
+                className={`flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left ring-1 transition-colors disabled:cursor-wait ${
                   isCurrent
-                    ? "border-slap bg-slap-wash"
-                    : "border-transparent hover:border-rule hover:bg-paper/60"
+                    ? "bg-slap-wash ring-slap/25"
+                    : "ring-transparent hover:bg-surface-2 hover:ring-ink/5"
                 } ${isPending ? "opacity-60" : ""}`}
               >
                 <span
@@ -231,7 +232,7 @@ function TopperList({ toppers, tier, board, highlightName, onSelectTopper, pendi
                       {badge}
                     </span>
                   ) : (
-                    <span className="font-serif text-sm text-faint">
+                    <span className="font-display text-sm font-bold text-faint">
                       {String(rank).padStart(2, "0")}
                     </span>
                   )}
@@ -301,9 +302,9 @@ function AnimatedCount({ value, className }) {
   return (
     <motion.span
       key={value}
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+      initial={{ opacity: 0, y: -6, scale: 0.85 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={SPRING_POP}
       className={className}
     >
       {Number(value).toLocaleString("en-IN")}
@@ -327,7 +328,7 @@ function CompactAvatar({ src, name }) {
   const showImage = Boolean(src) && !failed;
 
   return (
-    <div className="size-11 shrink-0 overflow-hidden rounded-full border border-rule bg-paper">
+    <div className="size-11 shrink-0 overflow-hidden rounded-full bg-surface-2 ring-1 ring-ink/5">
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -342,7 +343,7 @@ function CompactAvatar({ src, name }) {
       ) : (
         <span
           aria-hidden
-          className="flex size-full items-center justify-center font-serif text-sm text-faint"
+          className="flex size-full items-center justify-center font-display text-sm font-bold text-faint"
         >
           {monogramOf(name)}
         </span>

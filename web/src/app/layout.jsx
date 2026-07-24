@@ -1,16 +1,23 @@
-import { Inter, Source_Serif_4 } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
 
 import { Providers } from "./providers";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+/**
+ * Two rounded faces, no serif anywhere: Fredoka carries every heading — it's a
+ * geometric rounded display cut that reads as confident rather than official —
+ * and Nunito handles body copy, keeping the same rounded terminals so the two
+ * feel like one family without the headings losing their punch.
+ */
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
   display: "swap",
 });
@@ -22,14 +29,14 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#faf6ee",
+  themeColor: "#f4f5fb",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${sourceSerif.variable} h-full`}
+      className={`${fredoka.variable} ${nunito.variable} h-full`}
     >
       <body className="min-h-full">
         <Providers>{children}</Providers>

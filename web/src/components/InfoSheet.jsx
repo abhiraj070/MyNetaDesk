@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 
 import { BottomSheet } from "./BottomSheet";
+import { Badge, BADGES } from "./ui/Badge";
 import { manifestoPoints } from "@/lib/manifesto";
 
 function orNull(value) {
@@ -43,7 +44,7 @@ export function InfoSheet({ open, onClose, subject }) {
       title="Information"
       subtitle={name}
     >
-      <dl className="border-t border-rule">
+      <dl className="overflow-hidden rounded-card bg-surface-2 px-4 ring-1 ring-ink/5">
         {party && <Fact term="Party" value={party} />}
 
         {isMinister ? (
@@ -62,12 +63,13 @@ export function InfoSheet({ open, onClose, subject }) {
 
       {points.length > 0 && (
         <section className="mt-8">
-          <div className="flex items-baseline gap-3">
-            <h3 className="eyebrow text-ink">
-              {isMinister ? "Union Minister's commitments" : "Chief Minister's commitments"}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge {...BADGES.record} size="sm" />
+            <h3 className="font-display text-sm font-bold text-ink">
+              {isMinister
+                ? "Union Minister's commitments"
+                : "Chief Minister's commitments"}
             </h3>
-            <span className="h-px flex-1 bg-rule" />
-            {party && <span className="text-[11px] text-muted">{party}</span>}
           </div>
 
           <ul className="mt-3 space-y-2.5">
@@ -79,13 +81,13 @@ export function InfoSheet({ open, onClose, subject }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-                  className="flex items-start gap-3 rounded-card border border-rule bg-paper/60 px-4 py-3"
+                  className="flex items-start gap-3 rounded-card bg-surface-2 px-4 py-3.5 ring-1 ring-ink/5"
                 >
                   <CheckCircle2
                     className="mt-0.5 size-4 shrink-0 text-laurel"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                   />
-                  <span className="text-sm leading-relaxed text-ink">
+                  <span className="text-sm leading-relaxed font-medium text-ink">
                     {point}
                   </span>
                 </motion.li>
@@ -97,7 +99,7 @@ export function InfoSheet({ open, onClose, subject }) {
             <button
               type="button"
               onClick={() => setShowAll((prev) => !prev)}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-control text-xs font-medium tracking-[0.05em] text-ink uppercase transition-colors hover:text-slap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-4 py-2 font-display text-xs font-semibold text-brand-strong ring-1 ring-ink/5 transition-colors hover:bg-brand-wash focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               {showAll
                 ? "Show less"
@@ -122,8 +124,8 @@ function Fact({ term, value, last = false }) {
     <div
       className={`flex items-start gap-4 py-3.5 ${last ? "" : "border-b border-rule"}`}
     >
-      <dt className="eyebrow w-32 shrink-0 pt-0.5">{term}</dt>
-      <dd className="min-w-0 flex-1 text-sm text-ink">{value}</dd>
+      <dt className="eyebrow w-28 shrink-0 pt-0.5">{term}</dt>
+      <dd className="min-w-0 flex-1 text-sm font-semibold text-ink">{value}</dd>
     </div>
   );
 }

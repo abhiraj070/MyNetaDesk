@@ -26,9 +26,17 @@ export function useVote(tier, subject) {
   const [casts, setCasts] = useState(0);
   const [isError, setIsError] = useState(false);
 
+  // The server tallies as they stood when this session's first verdict was
+  // cast. Every local increment is measured from here rather than from
+  // whatever the query currently holds — see `slaps`/`roses` below.
+  const [baseline, setBaseline] = useState(null);
+
   // Mirrors `casts` outside of state so a failure can roll back without
   // reading state inside an updater.
   const countRef = useRef(0);
+
+  const serverSlaps = subject?.slap_count ?? 0;
+  const serverRoses = subject?.rose_count ?? 0;
 
   const { mutate, isPending } = useMutation({
     mutationFn: isMinister ? castMinistryVote : castCmVote,
@@ -62,6 +70,9 @@ export function useVote(tier, subject) {
       setChoice(next);
       setCasts(countRef.current);
       setIsError(false);
+      setBaseline(
+        (previous) => previous ?? { slap: serverSlaps, rose: serverRoses },
+      );
 
       const payload = isMinister
         ? {
@@ -85,8 +96,29 @@ export function useVote(tier, subject) {
         },
       });
     },
-    [choice, isMinister, mutate, subject],
+    [choice, isMinister, mutate, subject, serverSlaps, serverRoses],
   );
 
-  return { choice, casts, vote, isPending, isError };
+  /**
+   * The displayed tallies.
+   *
+   * `max(server, baseline + casts)` rather than `server + casts`: the success
+   * handler above invalidates `cm-location`, so for the home CM the refetched
+   * `slap_count` already contains the vote that `casts` is also counting —
+   * adding them showed one more than the server actually held (ministers were
+   * unaffected, since nothing invalidates their query). Taking the larger of
+   * the two keeps the optimistic number up while the request is in flight,
+   * absorbs it the moment the server catches up, and still moves if someone
+   * else's votes push the server total past ours — with no dip in between.
+   */
+  const slaps = Math.max(
+    serverSlaps,
+    baseline && choice === "slap" ? baseline.slap + casts : 0,
+  );
+  const roses = Math.max(
+    serverRoses,
+    baseline && choice === "rose" ? baseline.rose + casts : 0,
+  );
+
+  return { choice, slaps, roses, vote, isPending, isError };
 }
