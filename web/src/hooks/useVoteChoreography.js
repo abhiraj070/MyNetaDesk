@@ -25,10 +25,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * feel abrupt. Every downstream duration — the projectile, the portrait
  * recoil, the bloom — derives from these, so they scale with it.
  */
-export const WIND_UP_MS = 550;
+// Only FLIGHT_MS and IMPACT_MS are read by other files (the projectile and the
+// impact effects sync to them); WIND_UP_MS and SETTLE_MS are used only inside
+// this hook, so they stay module-local.
+const WIND_UP_MS = 550;
 export const FLIGHT_MS = 600;
 export const IMPACT_MS = 480;
-export const SETTLE_MS = 300;
+const SETTLE_MS = 300;
 
 /**
  * Where the strike actually lands, as a fraction of the portrait's own

@@ -1,5 +1,6 @@
 import { Fredoka, Nunito } from "next/font/google";
 
+import { AmbientSparkles } from "@/components/AmbientSparkles";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
       className={`${fredoka.variable} ${nunito.variable} h-full`}
     >
       <body className="min-h-full">
+        <AmbientSparkles />
         <Providers>{children}</Providers>
       </body>
     </html>

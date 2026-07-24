@@ -214,7 +214,7 @@ function TopperList({ toppers, tier, board, highlightName, onSelectTopper, pendi
                 aria-label={`View ${name}'s profile`}
                 className={`flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left ring-1 transition-colors disabled:cursor-wait ${
                   isCurrent
-                    ? "bg-slap-wash ring-slap/25"
+                    ? "bg-brand-wash ring-brand/25"
                     : "ring-transparent hover:bg-surface-2 hover:ring-ink/5"
                 } ${isPending ? "opacity-60" : ""}`}
               >

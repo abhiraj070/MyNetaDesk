@@ -1,37 +1,3 @@
-"""
-Daily reset of the `slap_count_today` / `rose_count_today` counters.
-
-Design notes, since "reset every 24 hours" has several tempting-but-wrong
-implementations:
-
-* **Not per request.** Checking (or worse, rewriting) the counters on every
-  vote or every read would put a write on the hot path for no benefit. This
-  runs exactly twice a day at most: once at the boundary, once at startup as a
-  catch-up.
-* **Not "sleep 86400".** A fixed sleep drifts, and it resets at whatever time
-  the process happened to start. This sleeps until the next local midnight and
-  recomputes the target every iteration, so restarts and DST shifts don't move
-  the boundary.
-* **Atomic.** The whole reset — both tables plus the bookkeeping row — runs in
-  one transaction via `engine.begin()`. Either the day rolls over completely or
-  not at all.
-* **Safe with multiple workers.** Uvicorn with `--workers N` (or several
-  instances behind a load balancer) would otherwise run N resets. A Postgres
-  transaction-level advisory lock means exactly one of them does the work and
-  the rest return immediately; the lock is released with the transaction, even
-  if the process dies mid-way.
-* **Survives downtime.** `daily_counter_resets.last_reset_on` records the last
-  day that was cleared. On startup — and on every tick — a day that has already
-  been reset is skipped, and a boundary missed while the service was down is
-  caught up on the next start. This is also what makes a restart safe: without
-  it, every deploy would wipe the day's counters.
-* **Minimal database load.** The `WHERE` clause touches only rows that actually
-  carry a non-zero counter, so on a quiet day the UPDATE writes nothing. It is
-  `IS DISTINCT FROM 0` rather than `<> 0` because the `_today` columns are
-  nullable and `NULL <> 0` is NULL, not true — plain `<>` would skip exactly
-  the rows that most need normalising, and they would stay NULL forever.
-"""
-
 import asyncio
 import logging
 import os
@@ -42,14 +8,8 @@ from sqlalchemy import text
 
 from app.db.connect import engine
 
-# Deliberately uvicorn's own logger rather than `__name__`: uvicorn configures
-# handlers for its loggers only and leaves the root logger bare, so a module
-# logger's output is swallowed. A daily job that runs silently is a job nobody
-# can tell has stopped.
 logger = logging.getLogger("uvicorn.error")
 
-# Any stable 64-bit integer works; it only has to be unique among the advisory
-# locks this database uses.
 _LOCK_KEY = 8_412_553_001
 
 _BOOKKEEPING_DDL = text(

@@ -166,10 +166,25 @@ function VoteButton({ option, count, isPicked, onVote, buttonsRef }) {
           ))}
         </AnimatePresence>
 
-        {/* Top-edge sheen: sells the disc as domed without a glossy highlight. */}
+        {/* Layered lighting that sells the disc as a moulded key rather than a
+            flat circle: a broad top sheen, a tight specular catch-light off to
+            one side, an inner rim highlight, and a soft floor shadow inside the
+            lower edge. All static overlays — none of them animate. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-linear-to-b from-white/25 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-linear-to-b from-white/30 to-transparent"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-[13%] left-[24%] h-4 w-7 -rotate-12 rounded-full bg-white/40 blur-md sm:h-5 sm:w-9"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/25"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 rounded-b-full bg-linear-to-t from-black/20 to-transparent"
         />
 
         <span aria-hidden className="relative text-4xl leading-none sm:text-5xl">
@@ -185,7 +200,7 @@ function VoteButton({ option, count, isPicked, onVote, buttonsRef }) {
           initial={{ scale: 0.82 }}
           animate={{ scale: 1 }}
           transition={SPRING_POP}
-          className="relative flex min-w-11 items-center justify-center rounded-full bg-black/18 px-2 py-0.5"
+          className="relative flex min-w-11 items-center justify-center rounded-full bg-black/25 px-2.5 py-0.5 ring-1 ring-inset ring-white/25 shadow-[inset_0_1px_0_rgb(255_255_255/0.28),inset_0_-1px_2px_rgb(0_0_0/0.25)] backdrop-blur-[2px]"
         >
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span

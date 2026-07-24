@@ -290,8 +290,6 @@ def update_cm_count(request: UpdateCmRequest, db: Session= Depends(get_db)):
             today_count="rose_count_today" 
         else: 
             today_count= "slap_count_today" 
-        # See the note in `update_ministry_count`: the `_today` columns can hold
-        # NULL, and `NULL + 1` would drop the vote from the daily tally.
         stmt= (update(cm)
                 .where((cm.c.state_key==state_key) & (cm.c.name==name))
                 .values({
@@ -310,29 +308,7 @@ def update_cm_count(request: UpdateCmRequest, db: Session= Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-
-HIGHLIGHT_TIEBREAK_NOTE = """
-The three highlight endpoints all answer the same question for a different
-counter: who is top of the pile *today*.
-
-They read the `_today` columns rather than the lifetime `slap_count` /
-`rose_count`, because that is what the section they feed is called and what the
-daily reset in `app.tasks.daily_reset` maintains. Rows whose counter is still
-zero are excluded, so "nobody has been slapped yet today" comes back as an
-explicit null instead of an arbitrary row with a count of 0.
-"""
-
-
 def _highlight(db, cm_count, minister_count, key):
-    """
-    Returns whichever of the two tiers holds the larger count, as
-    `{key: row | None}`.
-
-    A null payload with 200 is the correct answer for an empty or all-zero
-    table — it is a "nothing to show yet" state, not a failure — so the caller
-    can render an empty state rather than an error. Genuine database problems
-    still raise.
-    """
     top_cm = db.execute(
         select(
             cm.c.name,
@@ -364,8 +340,6 @@ def _highlight(db, cm_count, minister_count, key):
         .limit(1)
     ).mappings().first()
 
-    # Either side may legitimately be missing, so every comparison below has to
-    # tolerate None rather than assuming both tiers have a row.
     if top_cm is None and top_minister is None:
         return {key: None}
     if top_minister is None:
@@ -381,7 +355,6 @@ def _highlight(db, cm_count, minister_count, key):
 
 
 def _highlight_route(db, cm_count, minister_count, key):
-    """Shared error envelope for the three highlight endpoints."""
     try:
         return _highlight(db, cm_count, minister_count, key)
     except SQLAlchemyError as e:
@@ -389,10 +362,6 @@ def _highlight_route(db, cm_count, minister_count, key):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-
-# The `_today` columns are nullable, so every read of them is wrapped: an
-# un-voted row holds NULL, and both `NULL > 0` and `NULL + NULL` are NULL,
-# which would quietly drop those rows out of the ranking and out of the sum.
 def _today(column):
     return func.coalesce(column, 0)
 

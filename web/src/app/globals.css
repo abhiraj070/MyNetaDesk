@@ -46,11 +46,29 @@
   --radius-control: 18px;
   --radius-photo: 26px;
 
-  --shadow-card: 0 1px 2px rgb(23 22 51 / 0.04), 0 10px 24px -12px rgb(23 22 51 / 0.16);
-  --shadow-lift: 0 2px 6px rgb(23 22 51 / 0.05), 0 28px 56px -24px rgb(23 22 51 / 0.26);
-  /* The hero's own glow: brand-tinted, so the card reads as lit rather than
-     simply raised. */
-  --shadow-hero: 0 2px 8px rgb(23 22 51 / 0.05), 0 34px 64px -28px rgb(14 165 233 / 0.42);
+  /*
+   * One elevation scale, three steps, each a stack of three drop layers —
+   * contact, key, ambient — rather than a single blurred shadow. The graduated
+   * falloff (a tight dark contact shadow under a wide soft ambient one) is what
+   * separates a "material" surface from a flat div with a box-shadow, and every
+   * card/pill/chip pulls from these so the whole UI shares one light source.
+   *
+   *   card  — resting surfaces (tiles, chips, the app-bar chip)
+   *   lift  — floating / hovered surfaces (the bottom bar, hover states)
+   *   hero  — the one featured object, brand-tinted so it reads as lit
+   */
+  --shadow-card:
+    0 1px 1px rgb(23 22 51 / 0.03),
+    0 3px 6px -2px rgb(23 22 51 / 0.06),
+    0 12px 28px -12px rgb(23 22 51 / 0.18);
+  --shadow-lift:
+    0 1px 1px rgb(23 22 51 / 0.04),
+    0 6px 12px -4px rgb(23 22 51 / 0.08),
+    0 30px 60px -24px rgb(23 22 51 / 0.28);
+  --shadow-hero:
+    0 1px 2px rgb(23 22 51 / 0.05),
+    0 10px 24px -10px rgb(23 22 51 / 0.14),
+    0 40px 72px -30px rgb(14 165 233 / 0.40);
 }
 
 html {
@@ -62,11 +80,29 @@ body {
     radial-gradient(760px 560px at 8% -6%, rgb(14 165 233 / 0.18) 0%, transparent 62%),
     radial-gradient(680px 540px at 102% 4%, rgb(255 78 58 / 0.14) 0%, transparent 60%),
     radial-gradient(720px 620px at 50% 108%, rgb(18 185 129 / 0.12) 0%, transparent 62%),
+    radial-gradient(1100px 520px at 50% -12%, rgb(255 255 255 / 0.6) 0%, transparent 55%),
     var(--color-paper);
   background-attachment: fixed;
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * A whisper of film grain over the ambient gradient — the single cheapest way
+ * to stop large flat colour fields from banding and to give the whole ground a
+ * printed-paper tooth. Fixed and behind all content (negative z paints above
+ * the body's own background but below the app), tiny opacity, no repaint cost.
+ * The white surfaces sit on top of it, so it only ever shows in the gaps.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* Every interactive button gets a pointer. Tailwind v4's preflight leaves
@@ -114,14 +150,87 @@ button:not(:disabled),
   will-change: transform;
 }
 
-/* The mobile pager scrolls horizontally; the dots are the affordance,
-   so the native bar would only add clutter. */
-.no-scrollbar {
-  scrollbar-width: none;
+/*
+ * A slow specular sweep for the one badge we want to catch the eye — the hero's
+ * "Featured" sticker. A single diagonal highlight travelling across on a long,
+ * eased loop; deliberately subtle and infrequent so it reads as light catching
+ * a foil label, not a spinner. The host element sets `position: relative` and
+ * `overflow: hidden`; this ::after inherits its radius.
+ */
+@keyframes badge-shimmer {
+  0% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  60%,
+  100% {
+    transform: translateX(240%) skewX(-18deg);
+  }
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+.badge-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.7),
+    transparent
+  );
+  animation: badge-shimmer 4.5s ease-in-out infinite;
+}
+
+/*
+ * Ambient sparkles: a handful of tiny fixed dots that twinkle on their own
+ * offset delays, sitting behind the app to add life to the empty margins.
+ * Purely opacity/scale on the compositor; the reduced-motion block below stops
+ * them and leaves the dots faint but static.
+ */
+@keyframes sparkle-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  50% {
+    opacity: var(--sparkle-peak, 0.5);
+    transform: scale(1);
+  }
+}
+
+.sparkle {
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.95) 0%, transparent 70%);
+  animation: sparkle-twinkle var(--sparkle-dur, 5s) ease-in-out infinite;
+  animation-delay: var(--sparkle-delay, 0s);
+}
+
+/* The sweep used by skeleton placeholders while data loads. */
+@keyframes skeleton-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.55),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
 }
 
 /* Respect users who ask the OS to cut motion — Framer Motion reads this too. */

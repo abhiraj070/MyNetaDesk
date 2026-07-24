@@ -31,6 +31,17 @@ export function VotePortrait({
     >
       <Portrait src={src} name={name} className="w-full" />
 
+      {/* Persistent glass lighting — sits above the image, below the transient
+          impact effects, so a slap flash still reads on top. A soft highlight
+          across the top-left corner plus a hairline inner rim seat the photo
+          under one light source; a faint floor gradient stops the bottom edge
+          from looking cut out. Purely static, no animation. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-photo">
+        <span className="absolute -inset-x-6 -top-10 h-2/3 bg-[radial-gradient(60%_100%_at_28%_0%,rgba(255,255,255,0.5),transparent_72%)]" />
+        <span className="absolute inset-0 rounded-photo ring-1 ring-inset ring-white/15" />
+        <span className="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-ink/15 to-transparent" />
+      </div>
+
       {/* Effects are clipped to the portrait so nothing bleeds over the text. */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-photo">
         <AnimatePresence>

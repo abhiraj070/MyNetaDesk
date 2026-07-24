@@ -38,10 +38,10 @@ export function IconAction({
       whileHover={{ scale: 1.12, y: -3, transition: SPRING_POP }}
       whileTap={{ scaleX: 1.1, scaleY: 0.9, y: 1, transition: SPRING_PRESS }}
       transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-      className={`relative ${dimensions} flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+      className={`relative ${dimensions} flex shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
         highlight
           ? "bg-slap text-white shadow-card"
-          : "bg-surface-2 text-muted ring-1 ring-ink/5 hover:bg-brand-wash hover:text-brand-strong"
+          : "bg-surface-2 text-muted ring-1 ring-inset ring-ink/5 hover:bg-brand-wash hover:text-brand-strong hover:ring-brand/20 hover:shadow-sm"
       }`}
     >
       {highlight && (

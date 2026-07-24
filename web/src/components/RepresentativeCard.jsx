@@ -72,20 +72,32 @@ export function RepresentativeCard({ subject, keySeed, onFirstVote }) {
           whileHover={{ y: -7, transition: SPRING_POP }}
           className="relative flex min-h-[56dvh] flex-1 flex-col items-center justify-center overflow-visible rounded-card bg-surface px-5 py-6 text-center shadow-hero sm:px-8 sm:py-8"
         >
-          {/* Featured framing: a soft brand-to-slap wash bleeding down from the
-              top of the card, and the sticker pinned over its corner. Both are
-              decoration — they sit behind/above the content, never in its flow,
-              so the card's measured height is unchanged. */}
+          {/* Featured framing, all decoration — these sit behind/above the
+              content, never in its flow, so the card's measured height is
+              unchanged. Three layers build the "lit" look: a brand wash
+              bleeding down from the top, a faint warm counter-glow from the
+              top-right so the light reads as coming from one side, and a soft
+              vignette at the foot that seats the name on slightly richer
+              ground. */}
           <span
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-2/5 rounded-t-card bg-linear-to-b from-brand-wash/70 via-brand-wash/20 to-transparent"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-2 right-2 size-32 rounded-full bg-slap/10 blur-3xl"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 rounded-b-card bg-linear-to-t from-surface-2/70 to-transparent"
           />
 
           <Badge
             {...BADGES.featured}
             tilt
+            shimmer
             size="sm"
-            className="absolute -top-2.5 left-4 shadow-card sm:left-6"
+            className="absolute -top-2.5 left-4 shadow-lift sm:left-6"
           />
 
           <motion.div
@@ -100,6 +112,14 @@ export function RepresentativeCard({ subject, keySeed, onFirstVote }) {
             <span
               aria-hidden
               className="pointer-events-none absolute inset-[-14%] rounded-full bg-brand/20 blur-2xl"
+            />
+
+            {/* A crisp light-to-brand gradient frame, one step wider than the
+                portrait, so the image sits in a subtle bezel rather than
+                floating with a plain hairline. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -inset-[3px] rounded-[29px] bg-linear-to-b from-white to-brand/25 shadow-card"
             />
 
             <VotePortrait

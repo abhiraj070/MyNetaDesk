@@ -61,7 +61,8 @@ export function Landing({ onAllowLocation, isBusy }) {
           <Button onClick={onAllowLocation} disabled={isBusy}>
             {isBusy ? "Finding you…" : "Who's mine? →"}
           </Button>
-          <span className="text-xs font-semibold text-faint">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-faint">
+            <span aria-hidden>🔒</span>
             Read once. Never stored.
           </span>
         </motion.div>
@@ -69,11 +70,14 @@ export function Landing({ onAllowLocation, isBusy }) {
 
       <motion.div
         variants={item}
-        className="rounded-card bg-surface p-5 shadow-card ring-1 ring-ink/5 sm:p-6"
+        className="rounded-card bg-surface p-5 shadow-card ring-1 ring-inset ring-ink/5 sm:p-6"
       >
-        <p className="font-display text-sm font-bold text-ink">
-          What you&apos;ll see
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="font-display text-sm font-bold text-ink">
+            What you&apos;ll see
+          </p>
+          <Badge emoji="✨" label="Free" tone="brand" size="sm" />
+        </div>
 
         <ul className="mt-3 space-y-2">
           {PROMISES.map((promise) => (
@@ -81,9 +85,12 @@ export function Landing({ onAllowLocation, isBusy }) {
               key={promise.text}
               whileHover={{ x: 4 }}
               transition={SPRING_POP}
-              className="flex items-center gap-3 rounded-control bg-surface-2 px-3.5 py-3 text-sm font-semibold text-ink"
+              className="flex items-center gap-3 rounded-control bg-surface-2 px-3.5 py-3 text-sm font-semibold text-ink ring-1 ring-inset ring-ink/5"
             >
-              <span aria-hidden className="text-base leading-none">
+              <span
+                aria-hidden
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-sm leading-none shadow-sm ring-1 ring-inset ring-ink/5"
+              >
                 {promise.emoji}
               </span>
               {promise.text}

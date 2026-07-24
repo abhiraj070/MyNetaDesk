@@ -48,6 +48,7 @@ export function Badge({
   tone = "neutral",
   size = "md",
   tilt = false,
+  shimmer = false,
   className = "",
 }) {
   return (
@@ -56,16 +57,16 @@ export function Badge({
       animate={{ scale: 1, opacity: 1, rotate: tilt ? -2 : 0 }}
       whileHover={{ scale: 1.06, rotate: tilt ? -4 : 0 }}
       transition={SPRING_POP}
-      className={`inline-flex max-w-full items-center rounded-full font-display font-semibold ring-1 ring-inset ${
+      className={`relative inline-flex max-w-full items-center overflow-hidden rounded-full font-display font-semibold ring-1 ring-inset ${
         TONES[tone] ?? TONES.neutral
-      } ${SIZES[size] ?? SIZES.md} ${className}`}
+      } ${SIZES[size] ?? SIZES.md} ${shimmer ? "badge-shimmer" : ""} ${className}`}
     >
       {emoji && (
-        <span aria-hidden className="leading-none">
+        <span aria-hidden className="relative leading-none">
           {emoji}
         </span>
       )}
-      <span className="truncate">{children ?? label}</span>
+      <span className="relative truncate">{children ?? label}</span>
     </motion.span>
   );
 }

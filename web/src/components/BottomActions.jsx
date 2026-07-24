@@ -24,7 +24,13 @@ export function BottomActions({
     // Not sticky itself — the page wraps this in the sticky, entrance-animated
     // container so the two concerns don't nest.
     <nav aria-label="Actions" className="shrink-0 pt-1.5 pb-2.5">
-      <div className="flex items-center justify-around gap-2 rounded-full bg-surface/85 px-3 py-2 shadow-lift ring-1 ring-ink/5 backdrop-blur-xl">
+      <div className="relative flex items-center justify-around gap-2 rounded-full bg-linear-to-b from-white/92 to-surface/80 px-3 py-2 shadow-lift ring-1 ring-ink/5 backdrop-blur-xl">
+        {/* A hairline top rim catches the light and reads the bar as a piece of
+            frosted glass floating over the page rather than a flat pill. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-6 top-px h-px rounded-full bg-white/70"
+        />
         <IconAction label="Search" onClick={onOpenSearch} icon={Search} />
         <IconAction
           label="Leaderboard"
