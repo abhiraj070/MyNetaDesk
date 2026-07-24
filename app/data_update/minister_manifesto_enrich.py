@@ -299,6 +299,22 @@ MANIFESTO_POINTS: dict[str, list[str]] = {
         "As Corporate Affairs Minister, moved the Insolvency and Bankruptcy Code (Amendment) Bill, 2025, passed in March 2026, introducing a creditor-initiated, out-of-court fast-track insolvency framework and cross-border insolvency provisions. (Portfolio: Corporate Affairs)",
         "In the FY26 Budget, proposed raising the FDI limit in the insurance sector from 74% to 100% for companies reinvesting the full premium in India. (Portfolio: Finance)",
     ],
+    "Nitin Gadkari": [
+        "Launched the revamped RAJMARG PRAVESH web portal to speed up and digitize No Objection Certificate approvals for fuel stations, wayside amenities, rest areas, and connecting roads along National Highways.",
+        "Set a road-safety target of cutting road accident deaths by 50% by 2030 and moving toward zero fatalities by 2040 under a 'Vision Zero' push, announcing mandatory active-safety features (ABS, lane-departure warning, driver-drowsiness alerts, blind-spot monitoring) in medium and heavy vehicles and a Centre of Excellence for Road Safety at IIT Madras.",
+        "Announced satellite/GNSS-based toll collection to replace physical toll plazas nationwide by end-2026, projecting Rs 1,500 crore in fuel savings and Rs 6,000 crore in added government revenue, and introduced a FASTag-based Annual Pass priced at Rs 3,000 from August 15, 2025.",
+        "Approved regulations legally authorizing 100% ethanol fuel use in vehicles, and has pushed automakers toward flex-fuel and alternative-fuel (electric, methanol, hydrogen) engines to cut fossil-fuel imports.",
+        "Set a construction-pace target of 60 km of national highway per day; as of February 2026, 22,223 km of the 26,425 km awarded under Bharatmala Pariyojana had been constructed.",
+        "In his Nagpur constituency, committed to planting 2.5 million trees under a 'Green Nagpur' initiative.",
+    ],
+    "Nityanand Rai": [
+        "In the Rajya Sabha, stated a target for India to be free of Left-Wing Extremism by March 2026, citing a 90% drop in LWE-related deaths (1,005 in 2010 to 100 in 2025) and an 88% drop in incidents (1,936 to 234) since 2010.",
+        "Introduced the Foreign Contribution (Regulation) Amendment Bill, 2026 in the Lok Sabha, stating its objective is to make the use of foreign contributions by NGOs and institutions more transparent and accountable.",
+        "Told the Lok Sabha the government has no plans to create a separate Ministry or Department of Union Territory Affairs, nor to form a Parliamentary Inspection Committee on Union Territories.",
+        "In a written Rajya Sabha reply, acknowledged that Pakistan-linked networks are using narcotics smuggling in Jammu and Kashmir and Punjab, including drone-based drug airdrops across the border, as a financing channel for terrorist groups.",
+        "Has pointed to Cyber Forensic Labs and the Police Technology Mission as initiatives to strengthen police capacity to tackle cybercrime.",
+        "During a visit to Mizoram, said India's overall development depends significantly on Northeast development, and assured that any decision on the India-Myanmar Free Movement Regime would take Mizoram's interests into account.",
+    ],
 }
 
 

@@ -145,12 +145,23 @@ def update_ministry_count(request: UpdateMinistryRequest, db: Session= Depends(g
         ministry_name= request.ministry_name
         if field not in ("slap_count", "rose_count"):
             raise HTTPException(status_code=400, detail=f"Cannot update {field} field")
-
+        if field=="rose_count": 
+            today_count="rose_count_today" 
+        else: 
+            today_count= "slap_count_today" 
         member= minister
 
+        # `COALESCE` on the daily counter: the `_today` columns were added
+        # without a default, so existing rows hold NULL — and `NULL + 1` is
+        # NULL, which would silently swallow every vote's daily tally while the
+        # lifetime count moved. This makes the first vote on an untouched row
+        # write 1 instead of nothing.
         stmt= (update(member)
                 .where((member.c.ministry==ministry_name) & (member.c.minister_name==name))
-                .values({field: member.c[field]+1})
+                .values({
+                    field: member.c[field]+1,
+                    today_count: func.coalesce(member.c[today_count], 0)+1,
+                })
         )
 
         result= db.execute(stmt)
@@ -275,9 +286,18 @@ def update_cm_count(request: UpdateCmRequest, db: Session= Depends(get_db)):
         if field not in ("slap_count", "rose_count"):
             raise HTTPException(status_code=400, detail=f"Cannot update {field} field")
 
+        if field=="rose_count": 
+            today_count="rose_count_today" 
+        else: 
+            today_count= "slap_count_today" 
+        # See the note in `update_ministry_count`: the `_today` columns can hold
+        # NULL, and `NULL + 1` would drop the vote from the daily tally.
         stmt= (update(cm)
                 .where((cm.c.state_key==state_key) & (cm.c.name==name))
-                .values({field: cm.c[field]+1})
+                .values({
+                    field: cm.c[field]+1,
+                    today_count: func.coalesce(cm.c[today_count], 0)+1,
+                })
         )
 
         result= db.execute(stmt)
@@ -289,3 +309,119 @@ def update_cm_count(request: UpdateCmRequest, db: Session= Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+HIGHLIGHT_TIEBREAK_NOTE = """
+The three highlight endpoints all answer the same question for a different
+counter: who is top of the pile *today*.
+
+They read the `_today` columns rather than the lifetime `slap_count` /
+`rose_count`, because that is what the section they feed is called and what the
+daily reset in `app.tasks.daily_reset` maintains. Rows whose counter is still
+zero are excluded, so "nobody has been slapped yet today" comes back as an
+explicit null instead of an arbitrary row with a count of 0.
+"""
+
+
+def _highlight(db, cm_count, minister_count, key):
+    """
+    Returns whichever of the two tiers holds the larger count, as
+    `{key: row | None}`.
+
+    A null payload with 200 is the correct answer for an empty or all-zero
+    table — it is a "nothing to show yet" state, not a failure — so the caller
+    can render an empty state rather than an error. Genuine database problems
+    still raise.
+    """
+    top_cm = db.execute(
+        select(
+            cm.c.name,
+            cm.c.state,
+            cm.c.state_key,
+            cm.c.party,
+            cm.c.photo_url,
+            cm.c.slap_count,
+            cm.c.rose_count,
+            cm_count.label("count"),
+        )
+        .where(cm_count > 0)
+        .order_by(cm_count.desc(), cm.c.id.asc())
+        .limit(1)
+    ).mappings().first()
+
+    top_minister = db.execute(
+        select(
+            minister.c.minister_name,
+            minister.c.party,
+            minister.c.ministry,
+            minister.c.photo_url,
+            minister.c.slap_count,
+            minister.c.rose_count,
+            minister_count.label("count"),
+        )
+        .where(minister_count > 0)
+        .order_by(minister_count.desc(), minister.c.id.asc())
+        .limit(1)
+    ).mappings().first()
+
+    # Either side may legitimately be missing, so every comparison below has to
+    # tolerate None rather than assuming both tiers have a row.
+    if top_cm is None and top_minister is None:
+        return {key: None}
+    if top_minister is None:
+        winner, tier = top_cm, "cm"
+    elif top_cm is None:
+        winner, tier = top_minister, "minister"
+    elif top_cm["count"] >= top_minister["count"]:
+        winner, tier = top_cm, "cm"
+    else:
+        winner, tier = top_minister, "minister"
+
+    return {key: {**dict(winner), "tier": tier}}
+
+
+def _highlight_route(db, cm_count, minister_count, key):
+    """Shared error envelope for the three highlight endpoints."""
+    try:
+        return _highlight(db, cm_count, minister_count, key)
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+# The `_today` columns are nullable, so every read of them is wrapped: an
+# un-voted row holds NULL, and both `NULL > 0` and `NULL + NULL` are NULL,
+# which would quietly drop those rows out of the ranking and out of the sum.
+def _today(column):
+    return func.coalesce(column, 0)
+
+
+@app.get("/most-slapped")
+def get_most_slapped(db: Session = Depends(get_db)):
+    return _highlight_route(
+        db,
+        _today(cm.c.slap_count_today),
+        _today(minister.c.slap_count_today),
+        "most_slapped",
+    )
+
+
+@app.get("/most-roasted")
+def get_most_roasted(db: Session = Depends(get_db)):
+    return _highlight_route(
+        db,
+        _today(cm.c.rose_count_today),
+        _today(minister.c.rose_count_today),
+        "most_roasted",
+    )
+
+
+@app.get("/most-judged")
+def get_most_judged(db: Session = Depends(get_db)):
+    return _highlight_route(
+        db,
+        _today(cm.c.slap_count_today) + _today(cm.c.rose_count_today),
+        _today(minister.c.slap_count_today) + _today(minister.c.rose_count_today),
+        "most_judged",
+    )

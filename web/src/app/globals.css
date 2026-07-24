@@ -4,7 +4,7 @@
  * Bright consumer theme (2026-07-24 redesign). Light-only by design.
  *
  * The old warm-paper palette read as newsprint; this one is built on a cool,
- * bright ground with a violet brand accent doing the "trustworthy" work and
+ * bright ground with a sky-blue brand accent doing the "trustworthy" work and
  * the two verdict colours doing the loud work. The verdict tokens keep their
  * original names — `slap` and `laurel` (not `rose`, which would shadow
  * Tailwind's own `rose-*` palette) — so nothing outside this file had to be
@@ -20,9 +20,9 @@
   --color-rule: #e8e8f4;
 
   /* Brand: the calm anchor under all the noise — nav, focus, quiet CTAs. */
-  --color-brand: #6c4dff;
-  --color-brand-strong: #5637e8;
-  --color-brand-wash: #eeeaff;
+  --color-brand: #0ea5e9;
+  --color-brand-strong: #0284c7;
+  --color-brand-wash: #e0f2fe;
 
   --color-slap: #ff4e3a;
   --color-slap-strong: #d92c1a;
@@ -32,10 +32,12 @@
   --color-laurel-strong: #0a8f62;
   --color-laurel-wash: #ddf7ec;
 
-  /* Trophy/《featured》accent — badges only, never a surface. */
-  --color-sun: #ff9f1a;
-  --color-sun-strong: #d97706;
-  --color-sun-wash: #fff1da;
+  /* Trophy/《featured》accent — badges only, never a surface. Named `sun` from
+     when it was amber; now a deeper azure so the Hall of Fame and Featured
+     stickers sit a step below the brand blue rather than reading as brass. */
+  --color-sun: #38bdf8;
+  --color-sun-strong: #0369a1;
+  --color-sun-wash: #dbeefe;
 
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fredoka), ui-rounded, system-ui, sans-serif;
@@ -48,7 +50,7 @@
   --shadow-lift: 0 2px 6px rgb(23 22 51 / 0.05), 0 28px 56px -24px rgb(23 22 51 / 0.26);
   /* The hero's own glow: brand-tinted, so the card reads as lit rather than
      simply raised. */
-  --shadow-hero: 0 2px 8px rgb(23 22 51 / 0.05), 0 34px 64px -28px rgb(108 77 255 / 0.42);
+  --shadow-hero: 0 2px 8px rgb(23 22 51 / 0.05), 0 34px 64px -28px rgb(14 165 233 / 0.42);
 }
 
 html {
@@ -57,7 +59,7 @@ html {
 
 body {
   background:
-    radial-gradient(760px 560px at 8% -6%, rgb(108 77 255 / 0.16) 0%, transparent 62%),
+    radial-gradient(760px 560px at 8% -6%, rgb(14 165 233 / 0.18) 0%, transparent 62%),
     radial-gradient(680px 540px at 102% 4%, rgb(255 78 58 / 0.14) 0%, transparent 60%),
     radial-gradient(720px 620px at 50% 108%, rgb(18 185 129 / 0.12) 0%, transparent 62%),
     var(--color-paper);

@@ -6,19 +6,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * Sequences the slap/rose micro-interaction for one card.
  *
- * Phases: idle → winding (message, both buttons locked) → flying (projectile
- * leaves the button, portrait swells) → impact (shake + mark, or bloom) →
- * settling → idle, and only then does the caller's `commit` run, so the tally
- * never moves before the animation lands.
+ * Phases: idle → winding (message) → flying (projectile leaves the button,
+ * portrait swells) → impact (shake + mark, or bloom) → settling → idle, and
+ * only then does the caller's `commit` run. `commit` is the reward beat, not
+ * the vote: the verdict itself is sent as soon as it is cast, so nothing
+ * downstream of the network — least of all the Today's Highlight tiles — has
+ * to wait out the animation to learn about it.
  *
  * The card is the stage: it holds the positioning context, and the flight path
  * is measured from the button and portrait rects at launch, so it stays correct
  * at any breakpoint without hard-coded coordinates.
  */
-export const WIND_UP_MS = 900;
-export const FLIGHT_MS = 900;
-export const IMPACT_MS = 700;
-export const SETTLE_MS = 450;
+/*
+ * Roughly a third quicker than the original 900/900/700/450 (2.95s → 1.93s).
+ * The four beats are cut proportionally rather than one of them being
+ * flattened, so the sequence still reads as wind-up → throw → impact → settle;
+ * dropping any single phase to near-zero is what makes this kind of animation
+ * feel abrupt. Every downstream duration — the projectile, the portrait
+ * recoil, the bloom — derives from these, so they scale with it.
+ */
+export const WIND_UP_MS = 550;
+export const FLIGHT_MS = 600;
+export const IMPACT_MS = 480;
+export const SETTLE_MS = 300;
 
 /**
  * Where the strike actually lands, as a fraction of the portrait's own
@@ -131,7 +141,13 @@ export function useVoteChoreography({ stageRef, portraitRef, buttonsRef }) {
 
   const play = useCallback(
     async (choice, commit) => {
-      if (busyRef.current) return;
+      // A press landing mid-sequence still counts — the caller has already
+      // recorded it before calling in. Only the second flourish is skipped;
+      // two projectiles crossing the same card would read as a glitch.
+      if (busyRef.current) {
+        commit();
+        return;
+      }
 
       // Someone who asked the OS to cut motion gets the outcome, not the show.
       if (reduceMotion) {

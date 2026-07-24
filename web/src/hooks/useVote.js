@@ -6,24 +6,27 @@ import { useCallback, useRef, useState } from "react";
 import { castCmVote, castMinistryVote } from "@/lib/api";
 
 /**
- * Picks a side for one subject, then lets you keep hitting it.
+ * Records verdicts for one subject. Both sides stay open: you can slap, then
+ * rose, then slap again, and every click is its own PATCH. Nothing here locks
+ * a side out — the earlier "pick a side and commit to it" rule is gone.
  *
- * The chosen side stays live and can be clicked repeatedly — each click is its
- * own PATCH. The opposite side locks only for as long as the card is mounted:
- * nothing is persisted, so a reload hands both buttons back.
+ * `choice` is therefore just the side you hit *last*, kept for the picked-side
+ * glow and for the share copy; it no longer gates anything.
  *
- * `casts` counts this session's increments so the tally reads `base + casts`.
- * It resets on reload, which is correct — the count the API returns already
- * includes everything recorded earlier.
+ * `casts` counts this session's increments per side, so each tally reads
+ * `baseline + casts[side]`. It resets on reload, which is correct — the count
+ * the API returns already includes everything recorded earlier.
  *
  * `tier` is "cm" | "minister"; each goes to its own endpoint.
  */
+const NO_CASTS = { slap: 0, rose: 0 };
+
 export function useVote(tier, subject) {
   const isMinister = tier === "minister";
   const queryClient = useQueryClient();
 
   const [choice, setChoice] = useState(null);
-  const [casts, setCasts] = useState(0);
+  const [casts, setCasts] = useState(NO_CASTS);
   const [isError, setIsError] = useState(false);
 
   // The server tallies as they stood when this session's first verdict was
@@ -33,7 +36,7 @@ export function useVote(tier, subject) {
 
   // Mirrors `casts` outside of state so a failure can roll back without
   // reading state inside an updater.
-  const countRef = useRef(0);
+  const countRef = useRef(NO_CASTS);
 
   const serverSlaps = subject?.slap_count ?? 0;
   const serverRoses = subject?.rose_count ?? 0;
@@ -48,25 +51,31 @@ export function useVote(tier, subject) {
     // covers "reopen the sheet," this covers "sheet already open elsewhere."
     //
     // Also invalidate the home CM's own location query: `RepresentativeCard`
-    // remounts (resetting `casts` to 0) whenever the subject changes and
-    // changes back — e.g. search someone else, then hit "Back" — and without
-    // this, the count displayed after that round trip would silently fall
-    // back to whatever `cm-location` fetched on the very first page load,
+    // remounts (resetting `casts`) whenever the subject changes and changes
+    // back — e.g. search someone else, then hit "Back" — and without this, the
+    // count displayed after that round trip would silently fall back to
+    // whatever `cm-location` fetched on the very first page load,
     // undercounting every vote cast since then even though the server has
     // the right total.
+    //
+    // `highlights` too: a verdict feeds the same `_today` counters those three
+    // endpoints rank on, so the tiles would otherwise sit a minute behind the
+    // vote the user just cast.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["cm-location"] });
+      queryClient.invalidateQueries({ queryKey: ["highlights"] });
     },
   });
 
   const vote = useCallback(
     (next) => {
       if (!subject) return;
-      // You can hit your own side as often as you like, but never cross over.
-      if (choice && next !== choice) return;
 
-      countRef.current += 1;
+      countRef.current = {
+        ...countRef.current,
+        [next]: countRef.current[next] + 1,
+      };
       setChoice(next);
       setCasts(countRef.current);
       setIsError(false);
@@ -88,15 +97,16 @@ export function useVote(tier, subject) {
 
       mutate(payload, {
         onError: () => {
-          countRef.current = Math.max(0, countRef.current - 1);
+          countRef.current = {
+            ...countRef.current,
+            [next]: Math.max(0, countRef.current[next] - 1),
+          };
           setCasts(countRef.current);
           setIsError(true);
-          // Hand the other side back only if nothing landed at all.
-          if (countRef.current === 0) setChoice(null);
         },
       });
     },
-    [choice, isMinister, mutate, subject, serverSlaps, serverRoses],
+    [isMinister, mutate, subject, serverSlaps, serverRoses],
   );
 
   /**
@@ -113,11 +123,11 @@ export function useVote(tier, subject) {
    */
   const slaps = Math.max(
     serverSlaps,
-    baseline && choice === "slap" ? baseline.slap + casts : 0,
+    baseline ? baseline.slap + casts.slap : 0,
   );
   const roses = Math.max(
     serverRoses,
-    baseline && choice === "rose" ? baseline.rose + casts : 0,
+    baseline ? baseline.rose + casts.rose : 0,
   );
 
   return { choice, slaps, roses, vote, isPending, isError };

@@ -16,9 +16,10 @@ import { SPRING_POP, SPRING_PRESS } from "@/lib/motion";
  * translucent chip below the glyph, so the button is one object rather than a
  * control with a caption.
  *
- * Once a side is picked it stays live; the opposite side dims and locks.
- * Both lock for the length of the send animation; that beat is announced by
- * the centred banner rather than inline.
+ * Both sides stay live at all times: slapping does not lock the rose, and a
+ * press during the send animation still records — it just doesn't launch a
+ * second projectile. The picked side keeps a coloured glow so your last
+ * verdict is still legible.
  */
 const OPTIONS = [
   {
@@ -48,7 +49,6 @@ export function VoteButtons({
   roseCount = 0,
   onVote,
   isError,
-  busy = false,
   buttonsRef,
 }) {
   const counts = { slap: slapCount, rose: roseCount };
@@ -56,25 +56,16 @@ export function VoteButtons({
   return (
     <div>
       <div className="flex items-start justify-center gap-8 sm:gap-12">
-        {OPTIONS.map((option) => {
-          const isPicked = choice === option.choice;
-          const isLockedOut = Boolean(choice) && !isPicked;
-          const isDisabled = isLockedOut || busy;
-
-          return (
-            <VoteButton
-              key={option.choice}
-              option={option}
-              count={counts[option.choice]}
-              isPicked={isPicked}
-              isLockedOut={isLockedOut}
-              isDisabled={isDisabled}
-              isBusy={busy}
-              onVote={onVote}
-              buttonsRef={buttonsRef}
-            />
-          );
-        })}
+        {OPTIONS.map((option) => (
+          <VoteButton
+            key={option.choice}
+            option={option}
+            count={counts[option.choice]}
+            isPicked={choice === option.choice}
+            onVote={onVote}
+            buttonsRef={buttonsRef}
+          />
+        ))}
       </div>
 
       <p
@@ -97,16 +88,7 @@ export function VoteButtons({
  * to the button rather than lifted to `VoteButtons` since neither side needs
  * to know about the other's ripples.
  */
-function VoteButton({
-  option,
-  count,
-  isPicked,
-  isLockedOut,
-  isDisabled,
-  isBusy,
-  onVote,
-  buttonsRef,
-}) {
+function VoteButton({ option, count, isPicked, onVote, buttonsRef }) {
   const [ripples, setRipples] = useState([]);
 
   const handleClick = () => {
@@ -133,52 +115,39 @@ function VoteButton({
         }}
         type="button"
         onClick={handleClick}
-        disabled={isDisabled}
         aria-pressed={isPicked}
         aria-label={`${option.label} this representative`}
         initial={false}
-        /*
-         * Three resting states, all transform-only:
-         *  - locked out (the side you didn't pick): shrinks back and drains of
-         *    colour, so it reads as out of play rather than merely faded
-         *  - busy (a verdict already in flight): eases down a hair, so a second
-         *    tap visibly does nothing
-         *  - idle: full size, sitting on its full edge
-         */
+        /* One resting state now. Neither disc is ever disabled or dimmed —
+           picking a side no longer locks the other out, and a press landing
+           mid-flight still counts (see `play` in useVoteChoreography), so
+           there is nothing left for a greyed-out state to communicate. The
+           picked side is marked by its glow alone. */
         animate={{
-          opacity: isLockedOut ? 0.4 : 1,
-          scaleX: isLockedOut ? 0.9 : isBusy ? 0.97 : 1,
-          scaleY: isLockedOut ? 0.9 : isBusy ? 0.97 : 1,
-          filter: isLockedOut ? "grayscale(0.55)" : "grayscale(0)",
+          opacity: 1,
+          scaleX: 1,
+          scaleY: 1,
           y: 0,
-          boxShadow: edgeShadow(isLockedOut ? EDGE_PRESSED : EDGE_REST),
+          boxShadow: edgeShadow(EDGE_REST),
         }}
-        whileHover={
-          isDisabled
-            ? undefined
-            : {
-                y: -4,
-                scaleX: 1.03,
-                scaleY: 1.03,
-                boxShadow: edgeShadow(EDGE_REST + 4),
-                transition: SPRING_POP,
-              }
-        }
+        whileHover={{
+          y: -4,
+          scaleX: 1.03,
+          scaleY: 1.03,
+          boxShadow: edgeShadow(EDGE_REST + 4),
+          transition: SPRING_POP,
+        }}
         /* The squish: the disc flattens as it drives down onto its edge, then
            springs back through a slight overshoot on release. */
-        whileTap={
-          isDisabled
-            ? undefined
-            : {
-                y: EDGE_REST - EDGE_PRESSED,
-                scaleX: 1.06,
-                scaleY: 0.92,
-                boxShadow: edgeShadow(EDGE_PRESSED),
-                transition: SPRING_PRESS,
-              }
-        }
+        whileTap={{
+          y: EDGE_REST - EDGE_PRESSED,
+          scaleX: 1.06,
+          scaleY: 0.92,
+          boxShadow: edgeShadow(EDGE_PRESSED),
+          transition: SPRING_PRESS,
+        }}
         transition={SPRING_POP}
-        className={`relative flex size-28 flex-col items-center justify-center gap-1 overflow-hidden rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed sm:size-32 ${option.face}`}
+        className={`relative flex size-28 flex-col items-center justify-center gap-1 overflow-hidden rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink sm:size-32 ${option.face}`}
       >
         <AnimatePresence>
           {ripples.map((id) => (

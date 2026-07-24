@@ -1,0 +1,100 @@
+{
+  "chief_ministers": [
+    {
+      "id": 1,
+      "name": "N. Chandrababu Naidu",
+      "slap_count": 11,
+      "rose_count": 2,
+      "slap_count_today": 11,
+      "rose_count_today": 1
+    },
+    {
+      "id": 9,
+      "name": "Nayab Singh Saini",
+      "slap_count": 4,
+      "rose_count": 1,
+      "slap_count_today": 0,
+      "rose_count_today": 0
+    },
+    {
+      "id": 15,
+      "name": "Mohan Yadav",
+      "slap_count": 12,
+      "rose_count": 4,
+      "slap_count_today": 5,
+      "rose_count_today": 3
+    }
+  ],
+  "ministers": [
+    {
+      "id": 1,
+      "minister_name": "Narendra Modi",
+      "slap_count": 4,
+      "rose_count": 0,
+      "slap_count_today": 0,
+      "rose_count_today": 0
+    },
+    {
+      "id": 2,
+      "minister_name": "Rajnath Singh",
+      "slap_count": 1,
+      "rose_count": 1,
+      "slap_count_today": 0,
+      "rose_count_today": 0
+    },
+    {
+      "id": 4,
+      "minister_name": "Nitin Gadkari",
+      "slap_count": 1,
+      "rose_count": 0,
+      "slap_count_today": 0,
+      "rose_count_today": 0
+    },
+    {
+      "id": 5,
+      "minister_name": "Jagat Prakash Nadda",
+      "slap_count": 0,
+      "rose_count": 1,
+      "slap_count_today": 0,
+      "rose_count_today": 0
+    },
+    {
+      "id": 6,
+      "minister_name": "Shivraj Singh Chouhan",
+      "slap_count": 3,
+      "rose_count": 0,
+      "slap_count_today": 0,
+      "rose_count_today": 0
+    },
+    {
+      "id": 7,
+      "minister_name": "Nirmala Sitharaman",
+      "slap_count": 0,
+      "rose_count": 14,
+      "slap_count_today": 0,
+      "rose_count_today": 12
+    },
+    {
+      "id": 53,
+      "minister_name": "Bhagirath Choudhary",
+      "slap_count": 2,
+      "rose_count": 0,
+      "slap_count_today": 0,
+      "rose_count_today": 0
+    }
+  ],
+  "mps": [
+    {
+      "id": 1755,
+      "name": "Bishnu Pada Ray",
+      "slap_count": 1,
+      "rose_count": 0
+    },
+    {
+      "id": 1880,
+      "name": "Rao Inderjit Singh",
+      "slap_count": 18,
+      "rose_count": 3
+    }
+  ]
+}

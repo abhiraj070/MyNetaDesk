@@ -136,3 +136,39 @@ export async function castMinistryVote({ name, ministryName, choice }) {
   });
   return data;
 }
+
+const HIGHLIGHT_ENDPOINTS = [
+  { slot: "slapped", path: "/most-slapped", key: "most_slapped" },
+  { slot: "loved", path: "/most-roasted", key: "most_roasted" },
+  { slot: "judged", path: "/most-judged", key: "most_judged" },
+];
+
+/**
+ * `GET /most-slapped`, `/most-roasted`, `/most-judged` — today's leader for
+ * each counter, across both tiers.
+ *
+ * Fetched with `allSettled` rather than `all` so one endpoint being down can
+ * only empty its own tile; the other two still render their data. Each slot
+ * comes back as `{ data, failed }`, where `data: null` is the server's honest
+ * "nobody has been slapped yet today" answer and `failed: true` is a transport
+ * or server error. The two stay distinct because they read very differently to
+ * a user.
+ *
+ * A row carries `tier` ("cm" | "minister") and a normalised `count`. The name
+ * is under `name` for a Chief Minister and `minister_name` for a Union
+ * Minister, matching the rest of this API.
+ */
+export async function fetchHighlights() {
+  const settled = await Promise.allSettled(
+    HIGHLIGHT_ENDPOINTS.map(({ path }) => api.get(path)),
+  );
+
+  return HIGHLIGHT_ENDPOINTS.reduce((slots, { slot, key }, index) => {
+    const result = settled[index];
+    slots[slot] =
+      result.status === "fulfilled"
+        ? { data: result.value.data?.[key] ?? null, failed: false }
+        : { data: null, failed: true };
+    return slots;
+  }, {});
+}

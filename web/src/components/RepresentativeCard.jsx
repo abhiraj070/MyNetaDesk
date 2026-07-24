@@ -139,14 +139,22 @@ export function RepresentativeCard({ subject, keySeed, onFirstVote }) {
           choice={choice}
           slapCount={slaps}
           roseCount={roses}
-          onVote={(next) =>
-            choreo.play(next, () => {
-              vote(next);
-              onFirstVote?.(next);
-            })
-          }
+          /*
+           * The verdict is sent the moment it's cast, not when the animation
+           * finishes. Holding the PATCH back until the end of the sequence
+           * meant the server — and therefore the Today's Highlight tiles,
+           * which are refetched off the back of that same mutation — spent the
+           * whole ~2s flight still describing the world before this vote, so a
+           * tile read exactly one behind the count the user had just produced.
+           *
+           * `play` keeps the flourish and still fires the reward toast at
+           * impact; only the network write moved earlier.
+           */
+          onVote={(next) => {
+            vote(next);
+            choreo.play(next, () => onFirstVote?.(next));
+          }}
           isError={isError}
-          busy={choreo.isBusy}
           buttonsRef={buttonsRef}
         />
       </motion.section>

@@ -21,7 +21,9 @@ export function VoteAnnouncement({ message }) {
           initial={{ opacity: 0, scale: 0.94, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: -6 }}
-          transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+          /* Tightened along with the wind-up it announces: at 550ms a 220ms
+             fade in and out left the banner barely settled before it left. */
+          transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
           className="pointer-events-none fixed inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center px-6"
         >
           <span className="rounded-card bg-surface/95 px-7 py-5 text-center font-display text-xl leading-snug font-bold text-balance text-ink shadow-lift ring-1 ring-ink/5 backdrop-blur-sm sm:text-2xl">

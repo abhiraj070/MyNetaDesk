@@ -333,7 +333,13 @@ export function Home() {
           />
 
           <motion.div {...rise(0.18)}>
-            <TodaysHighlight />
+            {/* Reuses the leaderboard's own row handler, so a highlight tile
+                opens exactly the profile a leaderboard row would — same fetch,
+                same card, same back button. */}
+            <TodaysHighlight
+              onSelectSubject={handleSelectTopper}
+              pendingKey={pendingTopperKey}
+            />
           </motion.div>
 
           <motion.div {...rise(0.24)} className="sticky bottom-0 z-30">

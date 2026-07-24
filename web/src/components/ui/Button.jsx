@@ -11,7 +11,7 @@ import { SPRING_POP } from "@/lib/motion";
  */
 const VARIANTS = {
   primary:
-    "bg-brand text-white shadow-[0_5px_0_var(--color-brand-strong)] hover:bg-brand-strong hover:shadow-[0_5px_0_#4526c9] active:translate-y-[3px] active:shadow-[0_2px_0_var(--color-brand-strong)] focus-visible:outline-brand",
+    "bg-brand text-white shadow-[0_5px_0_var(--color-brand-strong)] hover:bg-brand-strong hover:shadow-[0_5px_0_#075985] active:translate-y-[3px] active:shadow-[0_2px_0_var(--color-brand-strong)] focus-visible:outline-brand",
   secondary:
     "bg-surface text-ink ring-1 ring-ink/8 shadow-card hover:ring-brand/30 focus-visible:outline-brand",
   quiet:
