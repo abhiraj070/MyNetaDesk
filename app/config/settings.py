@@ -5,6 +5,7 @@ class settings(BaseSettings):
     model_config = SettingsConfigDict(env_file="app/.env")
 
     DB_URL: str
+    BEARER_TOKEN_X: str
 
 @lru_cache
 def get_settings():

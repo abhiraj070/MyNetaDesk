@@ -421,6 +421,60 @@ MANIFESTO_POINTS: dict[str, list[str]] = {
         "Has continued to articulate a 'multi-alignment' foreign policy doctrine, describing India's approach as pursuing issue-based coalitions to maximize national interest rather than fixed ideological blocs.",
         "At the Raisina Dialogue 2026, addressed a panel on the future of the Indian Ocean alongside counterparts from Seychelles, Mauritius, and Sri Lanka.",
     ],
+    "Satish Chandra Dubey": [
+        "Championed the Rs 37,500 crore Coal Gasification Incentive Scheme, describing it as a landmark initiative to draw investment into coal gasification technology and value-added coal products; the scheme is open to private players, who receive a 30-year coal linkage for raw material security. (Portfolio: Coal)",
+        "Chaired a high-level review of the Revised Jharia Master Plan, stating that rehabilitation would only be deemed successful once townships have roads, transport, hospitals, schools and police stations in place on schedule. (Portfolio: Coal)",
+        "Called for India to attain self-reliance in critical minerals while reviewing the Indian Bureau of Mines' functioning, and jointly launched the 7th and 8th tranches of critical and strategic mineral block auctions in 2026. (Portfolio: Mines)",
+        "Oversaw a CMPDI-MECL memorandum of understanding to strengthen cooperation on coal and mineral exploration for both energy and non-energy minerals. (Portfolio: Coal/Mines)",
+        "Reviewed operations at South Eastern Coalfields Ltd and Eastern Coalfields Ltd and laid foundation stones for CCL's Karo and Kargali coal handling plants in Jharkhand. (Portfolio: Coal)",
+    ],
+    "Savitri Thakur": [
+        "Delivered India's national intervention at the 70th Session of the UN Commission on the Status of Women in New York, highlighting India's 'women-led development' approach and citing over 100 million women organised into nearly 9 million Self-Help Groups.",
+        "Told the Lok Sabha that approval has been given to upgrade 2 lakh Anganwadi Centres into 'Saksham Anganwadis' for improved nutrition delivery and Early Childhood Care and Education services.",
+        "Defended the Poshan Tracker application's data-protection safeguards in response to privacy concerns, and highlighted that the app had achieved 97% Face Recognition System coverage for real-time monitoring of Anganwadi services.",
+        "Conducted review meetings on implementation of centrally sponsored schemes -- Poshan Abhiyan, Mission Shakti and Mission Vatsalya -- in states including Meghalaya.",
+    ],
+    "Shantanu Thakur": [
+        "Chaired a review of Sagarmala 2.0 and the Sagarmala Finance Corporation, focused on expediting port-led industrialisation projects, multimodal connectivity, and coastal infrastructure.",
+        "Stated India is on track to become a top global shipping centre by 2047, noting port capacity has more than doubled and turnaround time at major ports has dropped substantially over the past decade.",
+        "Highlighted a target for India to capture a 5% share of the global shipbuilding market by 2030, backed by a national shipbuilding policy and 10 planned world-class shipyards.",
+        "Discussed the Maritime Amrit Kaal Vision 2047, under which the government plans roughly Rs 3 lakh crore of investment in shipbuilding clusters, including six planned clusters and 11 standalone shipyards at coastal locations.",
+        "Said the government aims for 30% of India's shipping fleet to run on LNG, methanol or hydrogen by 2047 as part of a clean-fuel shipping push.",
+    ],
+    "Shivraj Singh Chouhan": [
+        "Chaired the National Rural Development Conference 2026 ('Rashtriya Gramin Vikas Sammelan') under the theme 'Viksit Gram, Viksit Bharat,' bringing together state Rural Development ministers to build a shared Centre-state roadmap. (Portfolio: Rural Development)",
+        "Noted that the Viksit Bharat-GRAM-G Act, 2025 raised the statutory rural wage-employment guarantee to 125 days and increased the Centre's contribution to nearly Rs 95,000 crore, up from Rs 86,000 crore under the earlier MGNREGA framework. (Portfolio: Rural Development)",
+        "Outlined the Kharif Campaign 2026 roadmap at the National Agriculture Conference, setting a foodgrain output target of 362.5 million tonnes for the 2025-26 rabi season. (Portfolio: Agriculture and Farmers Welfare)",
+        "Announced work under the Self-Reliance in Pulses Mission to procure the entire pre-registered marketable surplus of tur, urad and masoor at Minimum Support Price, aiming for full self-reliance in pulses by 2030-31. (Portfolio: Agriculture and Farmers Welfare)",
+        "Cleared a roughly Rs 15,000 crore Kharif procurement plan and announced NABARD/bank-run village-level camps to expand Kisan Credit Card coverage under the PM Dhan-Dhaanya Krishi Yojana, which raised KCC loan limits from Rs 3 lakh to Rs 5 lakh for an estimated 7.7 crore farmers, fishers and dairy producers. (Portfolio: Agriculture and Farmers Welfare)",
+    ],
+    "Shobha Karandlaje": [
+        "In a written reply to the Lok Sabha, said the four Labour Codes, which consolidate 29 existing central labour laws and came into force on November 21, 2025, mandate appointment letters, universal minimum wages, and extend rights and social security coverage to gig, platform, and interstate migrant workers. (Portfolio: Labour and Employment)",
+        "Has stated that the new labour codes are designed to extend EPFO and ESI social security benefits to nearly 90% of workers in the unorganised sector. (Portfolio: Labour and Employment)",
+        "Has chaired regional consultative meetings with southern and north-eastern state governments on labour law reform implementation and employment generation. (Portfolio: Labour and Employment)",
+        "In a Lok Sabha written reply, cited Udyam Registration data showing MSMEs in India now report over 8 crore jobs, with Uttar Pradesh leading among states. (Portfolio: MSME)",
+        "Has inaugurated MSME entrepreneurship and skill-development programmes run by the National Institute for MSME, including sessions on AI, digital marketing, and commercialisation of rural innovations. (Portfolio: MSME)",
+    ],
+    "Sukanta Majumdar": [
+        "As MoS Education, has stated the National Education Policy 2020 lays the foundation for inclusive, skill-centric, future-ready education aimed at nation-building. (Portfolio: Education)",
+        "Inaugurated a UGC workshop for vice-chancellors on writing undergraduate textbooks in Indian languages, part of the ASMITA project, a joint UGC-Bharatiya Bhasha Samiti effort to produce higher-education material in 12 Indian languages. (Portfolio: Education)",
+        "Inaugurated a national workshop on Multi-Disciplinary Education and Research Universities held under the PM-USHA scheme. (Portfolio: Education)",
+        "As MoS DoNER, has chaired review meetings on the PM-DevINE scheme (Rs 6,600 crore outlay for 2022-23 to 2025-26) and reviewed North Eastern infrastructure projects worth roughly Rs 3,108 crore. (Portfolio: DoNER)",
+        "Has promoted the UNNATI (Uttar Poorva Transformative Industrialization) Scheme, 2024, and North East Trade and Investment roadshows intended to attract industrial investment into the region. (Portfolio: DoNER)",
+    ],
+    "Tokhan Sahu": [
+        "In a Lok Sabha written reply, said over 1.64 crore houses have been sanctioned under PM Awas Yojana-Urban since its launch, with more than 98 lakh completed and handed over to beneficiaries.",
+        "Attended the launch of the Angikaar 2025 outreach campaign under PMAY-U 2.0, intended to raise awareness of scheme benefits including the Credit Risk Guarantee Fund Trust for Low Income Housing.",
+        "In a written Lok Sabha reply, said 7,636 projects worth about Rs 1.53 lakh crore had been completed under the Smart Cities Mission across 100 cities as of end-July 2025.",
+        "In Rajya Sabha and Lok Sabha replies, detailed state-wise allocations under the PM-eBus Sewa scheme, including 750 electric buses sanctioned across 10 Karnataka cities and 347 buses for four Punjab cities.",
+        "Presided over the concluding session of the National Urban Conclave 2025 at Yashobhoomi, New Delhi, which produced action points for India's roadmap toward inclusive, resilient, well-governed cities.",
+    ],
+    "V. Somanna": [
+        "In a Lok Sabha written reply, said that as of February 10, 2026, around 15.69 crore (81.02%) of India's 19.36 crore rural households have tap-water connections under the Jal Jeevan Mission, with more than 2.72 lakh villages achieving 100% household coverage. (Portfolio: Jal Shakti)",
+        "As Railways MoS, has announced the launch and extension of multiple Vande Bharat Express services in Karnataka, including Bengaluru-Mangaluru and Bengaluru-Dharwad-Belagavi routes, and confirmed plans for quadruple railway corridors around Bengaluru. (Portfolio: Railways)",
+        "Has held review meetings with local MPs, MLAs, and railway officials on project status in Tumakuru, Chitradurga, and Davangere, and inspected the Rail Wheel Factory and the Bengaluru Suburban Railway Project. (Portfolio: Railways)",
+        "Has inspected railway connectivity works to industrial nodes and other rail infrastructure, including at Thimmarajanahalli and Banaras Locomotive Works. (Portfolio: Railways)",
+    ],
 }
 
 

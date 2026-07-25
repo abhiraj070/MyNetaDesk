@@ -1,10 +1,14 @@
 from app.main import app
-from app.schema import LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest, GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest
+from app.schema import LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest, GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest, TweetRequest
 from app.db.connect import get_db, engine
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy import MetaData, Table, select, func, update
 from sqlalchemy.exc import SQLAlchemyError
+import httpx
+from app.config.settings import get_settings
+
+_settings= get_settings()
 
 metadata= MetaData()
 mp= Table("mps", metadata, autoload_with= engine)
@@ -12,8 +16,6 @@ pc= Table("parliamentary_constituencies", metadata, autoload_with= engine)
 manifesto= Table("party_manifesto_points", metadata, autoload_with=engine)
 minister= Table("ministers", metadata, autoload_with= engine)
 cm= Table("chief_ministers", metadata, autoload_with= engine)
-
-MEMBER_TABLES= {"mps": mp}
 
 
 @app.post("/get-location")
@@ -116,10 +118,7 @@ def update_member_count(request: UpdateMemberRequest, db: Session= Depends(get_d
         if field not in ("slap_count","rose_count"):
             raise HTTPException(status_code=400, detail=f"Cannot update {field} field")
 
-        if table not in MEMBER_TABLES:
-            raise HTTPException(status_code=400, detail=f"Cannot update {table} table")
-
-        member= MEMBER_TABLES[table]
+        member= table
 
         stmt= (update(member)
                .where((member.c.constituency_key==constituency_key) & (member.c.name==name))
@@ -150,12 +149,6 @@ def update_ministry_count(request: UpdateMinistryRequest, db: Session= Depends(g
         else: 
             today_count= "slap_count_today" 
         member= minister
-
-        # `COALESCE` on the daily counter: the `_today` columns were added
-        # without a default, so existing rows hold NULL — and `NULL + 1` is
-        # NULL, which would silently swallow every vote's daily tally while the
-        # lifetime count moved. This makes the first vote on an untouched row
-        # write 1 instead of nothing.
         stmt= (update(member)
                 .where((member.c.ministry==ministry_name) & (member.c.minister_name==name))
                 .values({
@@ -394,3 +387,68 @@ def get_most_judged(db: Session = Depends(get_db)):
         _today(minister.c.slap_count_today) + _today(minister.c.rose_count_today),
         "most_judged",
     )
+
+@app.post("/tweets")
+async def get_tweets(request: TweetRequest, db: Session= Depends(get_db)):
+    table= request.table
+    name= request.name
+    if table == "chief_ministers":
+        username= db.execute((select(cm.c.x_username).where(cm.c.name==name))).scalar()
+    else:
+        username= db.execute((select(minister.c.x_username).where(minister.c.minister_name==name))).scalar()
+
+    if not username:
+        return {"top_tweets": {}}
+
+    BEARER_TOKEN= _settings.BEARER_TOKEN_X
+    URL="https://api.x.com/2/tweets/search/recent"
+    headers={"Authorization": f"Bearer {BEARER_TOKEN}"}
+    params = {
+    "query": f"@{username} -is:retweet",
+    "sort_order": "relevancy",
+    "max_results": 10,
+
+    "tweet.fields": (
+        "created_at,"
+        "public_metrics,"
+        "author_id,"
+        "attachments,"
+        "referenced_tweets"
+    ),
+
+    "expansions": (
+        "author_id,"
+        "attachments.media_keys,"
+        "referenced_tweets.id,"
+        "referenced_tweets.id.author_id"
+    ),
+
+    "user.fields": (
+        "id,"
+        "name,"
+        "username,"
+        "profile_image_url,"
+        "verified,"
+        "verified_type"
+    ),
+
+    "media.fields": (
+        "media_key,"
+        "type,"
+        "url,"
+        "preview_image_url,"
+        "width,"
+        "height,"
+        "alt_text"
+    ),
+}
+    async with httpx.AsyncClient(timeout=10) as client:
+        response= await client.get(
+            URL,
+            headers= headers,
+            params= params
+        )
+    data= response.json()
+    return {"top_tweets": data}
+    
+    

@@ -39,3 +39,7 @@ class UpdateCmRequest(BaseModel):
     name_field_to_update: str
     state_key: str
     field_to_update: str
+
+class TweetRequest(BaseModel):
+    name: str
+    table: str

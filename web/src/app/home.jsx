@@ -13,6 +13,7 @@ import { RepresentativeCard } from "@/components/RepresentativeCard";
 import { SearchSheet } from "@/components/SearchSheet";
 import { ErrorScreen, LocatingScreen } from "@/components/StatusScreens";
 import { TodaysHighlight } from "@/components/TodaysHighlight";
+import { XDiscussionSheet } from "@/components/x/XDiscussionSheet";
 import { useMinistries } from "@/hooks/useMinistries";
 import {
   fetchCmByStateKey,
@@ -68,7 +69,7 @@ export function Home() {
   const [coords, setCoords] = useState(deepLink.coords);
   const [geoError, setGeoError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [openSheet, setOpenSheet] = useState(null); // "info" | "leaderboard" | "search" | null
+  const [openSheet, setOpenSheet] = useState(null); // "info" | "leaderboard" | "search" | "x" | null
   // A search-picked result, either tier — `{ tier: "cm" | "minister", data }`.
   // Kept as one variable (not two) so a cm pick and a minister pick can never
   // both be "selected" at once.
@@ -347,6 +348,7 @@ export function Home() {
               onOpenSearch={() => setOpenSheet("search")}
               onOpenLeaderboard={() => setOpenSheet("leaderboard")}
               onOpenInfo={() => setOpenSheet("info")}
+              onOpenX={() => setOpenSheet("x")}
               onShare={() => handleShare(lastChoice)}
               shareHighlight={Boolean(lastChoice)}
             />
@@ -379,6 +381,11 @@ export function Home() {
             }
             onSelectCm={handleSelectCm}
             onSelectMinister={handleSelectMinister}
+          />
+          <XDiscussionSheet
+            open={openSheet === "x"}
+            onClose={closeSheet}
+            subject={subject}
           />
 
           <Toast message={toast} />

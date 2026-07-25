@@ -3,6 +3,7 @@
 import { Info, Search, Share2, Trophy } from "lucide-react";
 
 import { IconAction } from "./ui/IconAction";
+import { XLogo } from "./x/XLogo";
 
 /**
  * The four secondary actions, gathered into one bar at the foot of the page —
@@ -18,6 +19,7 @@ export function BottomActions({
   onOpenLeaderboard,
   onOpenInfo,
   onShare,
+  onOpenX,
   shareHighlight = false,
 }) {
   return (
@@ -38,6 +40,7 @@ export function BottomActions({
           icon={Trophy}
         />
         <IconAction label="Information" onClick={onOpenInfo} icon={Info} />
+        <IconAction label="X Live Discussion" onClick={onOpenX} icon={XLogo} />
         <IconAction
           label="Share"
           onClick={onShare}
