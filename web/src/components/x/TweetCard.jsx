@@ -146,7 +146,10 @@ function MediaTile({ item, className, onOpen }) {
   return (
     <button
       type="button"
-      onClick={() => onOpen(item)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen(item);
+      }}
       className={`group relative overflow-hidden bg-[#e1e8ed] ${className}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- external X CDN */}
@@ -241,12 +244,27 @@ function LinkPreview({ urls }) {
   );
 }
 
-/** A quoted tweet: a bordered mini-tweet nested inside the host. */
+/** A quoted tweet: a bordered mini-tweet nested inside the host. Clicking it
+ *  opens the quoted post itself (not the host), matching X. */
 function QuotedTweet({ quoted, onOpenMedia }) {
   if (!quoted) return null;
   const thumb = quoted.media?.[0];
   return (
-    <div className="mt-3 overflow-hidden rounded-2xl border border-[#cfd9de]">
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation();
+        window.open(permalink(quoted.author, quoted.id), "_blank", "noopener");
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.stopPropagation();
+          window.open(permalink(quoted.author, quoted.id), "_blank", "noopener");
+        }
+      }}
+      className="mt-3 cursor-pointer overflow-hidden rounded-2xl border border-[#cfd9de] transition-colors hover:bg-[#f7f9f9]"
+    >
       <div className="px-3 pt-2.5">
         <div className="flex items-center gap-1.5 text-[15px]">
           <Avatar author={quoted.author} size="size-5" />
@@ -335,7 +353,7 @@ function TweetMenu({ author, id }) {
   ];
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -382,8 +400,22 @@ export function TweetCard({ tweet }) {
   const { author, metrics } = tweet;
   const longText = (tweet.text?.length ?? 0) > CLAMP_AT;
 
+  // Tapping anywhere on the post opens that exact tweet on X, like native X.
+  // Every interactive element inside (media, ⋯ menu, action row, expand, quoted
+  // tweet, links) stops propagation so it keeps its own behaviour.
+  const openPost = () =>
+    window.open(permalink(author, tweet.id), "_blank", "noopener");
+
   return (
-    <article className="flex gap-3 px-4 py-3">
+    <article
+      role="link"
+      tabIndex={0}
+      onClick={openPost}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") openPost();
+      }}
+      className="flex cursor-pointer gap-3 rounded-[24px] px-4 py-3 transition-colors hover:bg-[#f7f9f9] focus-visible:outline-2 focus-visible:outline-[#1d9bf0]"
+    >
       <Avatar author={author} />
 
       <div className="min-w-0 flex-1">
@@ -413,7 +445,10 @@ export function TweetCard({ tweet }) {
           {longText && (
             <button
               type="button"
-              onClick={() => setExpanded((v) => !v)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((v) => !v);
+              }}
               className="mt-0.5 text-[15px] text-[#1d9bf0] hover:underline"
             >
               {expanded ? "Show less" : "Show more"}
@@ -425,7 +460,10 @@ export function TweetCard({ tweet }) {
         <LinkPreview urls={tweet.urls} />
         <QuotedTweet quoted={tweet.quoted} onOpenMedia={setLightbox} />
 
-        <div className="mt-3 flex max-w-md items-center justify-between pr-1">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="mt-3 flex max-w-md items-center justify-between pr-1"
+        >
           <ActionButton
             icon={MessageCircle}
             value={count(metrics.replies)}
