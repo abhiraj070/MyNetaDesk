@@ -1,9 +1,9 @@
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config.settings import get_settings
 from app.tasks import daily_reset
 
 
@@ -25,9 +25,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="myNeta", lifespan=lifespan)
 origins = [
     origin.strip()
-    for origin in os.getenv(
-        "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
-    ).split(",")
+    for origin in get_settings().CORS_ORIGINS.split(",")
     if origin.strip()
 ]
 
