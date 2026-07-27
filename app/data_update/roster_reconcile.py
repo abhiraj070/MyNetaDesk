@@ -32,7 +32,7 @@ from data_update.roster_refresh import (  # noqa: E402
 )
 
 BASE_URL = "https://myneta.info"
-USER_AGENT = "SlapYourLeader-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
+USER_AGENT = "myNeta-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
 
 # MyNeta home-page state params -> our mlas.state_key
 STATE_PARAM = {

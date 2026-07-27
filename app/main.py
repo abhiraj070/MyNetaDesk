@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
         await daily_reset.stop(app)
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="myNeta", lifespan=lifespan)
 origins = [
     origin.strip()
     for origin in os.getenv(

@@ -37,7 +37,7 @@ RETRY_ATTEMPTS = 4
 RETRY_BACKOFF_SECONDS = 5
 BATCH_SIZE = 50
 BATCH_DELAY_SECONDS = 6
-USER_AGENT = "SlapYourLeader-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
+USER_AGENT = "myNeta-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
 # A single "politician" substring check was too strict: it correctly rejected
 # real false positives (name-collision pages like "Divine couple in Hinduism"
 # for an MP named Radhakrishna, or "American engineer" for an unrelated

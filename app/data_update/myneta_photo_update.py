@@ -43,7 +43,7 @@ from db.connect import engine
 
 BASE_URL = "https://myneta.info"
 LOKSABHA_WINNERS_URL = f"{BASE_URL}/LokSabha2024/index.php?action=show_winners&sort=default"
-USER_AGENT = "SlapYourLeader-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
+USER_AGENT = "myNeta-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
 
 RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 4

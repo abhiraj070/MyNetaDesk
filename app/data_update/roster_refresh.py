@@ -44,7 +44,7 @@ from sqlalchemy import text
 from db.connect import engine
 
 BASE_URL = "https://myneta.info"
-USER_AGENT = "SlapYourLeader-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
+USER_AGENT = "myNeta-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
 RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 4
 

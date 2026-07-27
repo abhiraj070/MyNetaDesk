@@ -16,7 +16,7 @@ sys.path.insert(0, "/Users/abhirajintern/Desktop/SYL/app")
 from sqlalchemy import text  # noqa: E402
 from db.connect import engine  # noqa: E402
 
-UA = "SlapYourLeader-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
+UA = "myNeta-DataPipeline/1.0 (self-hosted civic-sentiment app; contact: project owner)"
 
 ROW_RE = re.compile(
     r"candidate\.php\?candidate_id=(\d+)>([^<]+)</a></a>[^<]*(?:<b>)?</td>"
