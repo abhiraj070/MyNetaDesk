@@ -32,7 +32,7 @@ export function LocatingScreen({ label, detail }) {
       <div className="flex shrink-0 items-center justify-between gap-3">
         <p className="flex items-center gap-1.5 font-display text-base font-bold tracking-tight text-ink">
           <span aria-hidden>👋</span>
-          myNeta
+          MyNetaDesk
         </p>
         <Skeleton className="h-7 w-28 rounded-full" />
       </div>

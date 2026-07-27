@@ -24,7 +24,7 @@ const nunito = Nunito({
 });
 
 export const metadata = {
-  title: "myNeta",
+  title: "MyNetaDesk",
   description:
     "Find the Chief Minister for wherever you're standing, read their record, and register a verdict.",
 };
