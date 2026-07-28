@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
         await daily_reset.stop(app)
 
 
-app = FastAPI(title="MyNetaDesk", lifespan=lifespan)
+app = FastAPI(title="MyNetaji", lifespan=lifespan)
 origins = [
     origin.strip()
     for origin in get_settings().CORS_ORIGINS.split(",")

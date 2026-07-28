@@ -34,19 +34,19 @@ const siteUrl =
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
-  title: "MyNetaDesk",
+  title: "MyNetaji",
   description:
     "Find the Chief Minister for wherever you're standing, read their record, and register a verdict.",
   openGraph: {
     type: "website",
-    siteName: "MyNetaDesk",
+    siteName: "MyNetaji",
     url: "/",
-    title: "Slap Your Leader — MyNetaDesk",
+    title: "Slap Your Leader — MyNetaji",
     description: "India's most chaotic political game. 🌹 Rose or 👋 Slap?",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Slap Your Leader — MyNetaDesk",
+    title: "Slap Your Leader — MyNetaji",
     description: "India's most chaotic political game. 🌹 Rose or 👋 Slap?",
   },
 };

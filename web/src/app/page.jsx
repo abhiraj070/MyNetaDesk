@@ -4,7 +4,7 @@ import { getCmByState, getMinisterByName, ministerPortfolio } from "@/lib/og-dat
 
 import { Home } from "./home";
 
-const SITE = "MyNetaDesk";
+const SITE = "MyNetaji";
 
 /**
  * Builds the metadata block shared by the politician and leaderboard share

@@ -56,7 +56,7 @@ export function Leaderboard({
       <div className="mb-3 flex justify-end">
         <ShareButton
           url={leaderboardShareUrl(tier)}
-          title="MyNetaDesk Leaderboard"
+          title="MyNetaji Leaderboard"
           text="Who's getting slapped and rosed across India? See the leaderboard 👀"
           label="Share"
           variant="soft"

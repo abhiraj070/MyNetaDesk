@@ -25,7 +25,7 @@ const VARIANTS = {
 
 export function ShareButton({
   url,
-  title = "MyNetaDesk",
+  title = "MyNetaji",
   text = "",
   label = "Share",
   variant = "soft",

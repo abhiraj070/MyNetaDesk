@@ -1,14 +1,14 @@
-# MyNetaDesk
+# MyNetaji
 
-**MyNetaDesk** is a civic-accountability web app for India. It answers a simple question — *"who represents me, and what do I think of them?"* — by locating a user's Chief Minister from their GPS position, surfacing that leader's record, and letting anyone register a lightweight public verdict on any Chief Minister or Union Minister: a **slap** (👋, disapproval) or a **rose** (🌹, approval).
+**MyNetaji** is a civic-accountability web app for India. It answers a simple question — *"who represents me, and what do I think of them?"* — by locating a user's Chief Minister from their GPS position, surfacing that leader's record, and letting anyone register a lightweight public verdict on any Chief Minister or Union Minister: a **slap** (👋, disapproval) or a **rose** (🌹, approval).
 
-> "Neta" (नेता) is Hindi for *leader*. MyNetaDesk puts your leaders in front of you and turns your opinion into a tap.
+> "Neta" (नेता) is Hindi for *leader*. MyNetaji puts your leaders in front of you and turns your opinion into a tap.
 
 ---
 
 ## Table of contents
 
-- [What MyNetaDesk does](#what-mynetadesk-does)
+- [What MyNetaji does](#what-mynetaji-does)
 - [How it works](#how-it-works)
 - [The verdict mechanic](#the-verdict-mechanic)
 - [Tech stack](#tech-stack)
@@ -23,7 +23,7 @@
 
 ---
 
-## What MyNetaDesk does
+## What MyNetaji does
 
 - **Find your Chief Minister by location.** The browser's geolocation is resolved to a state (via a point-in-polygon lookup against constituency boundaries), and the app shows that state's sitting Chief Minister.
 - **Look up any Union Minister.** A searchable directory of the Union Council of Ministers, searchable by minister name, party, or ministry/portfolio.
@@ -40,7 +40,7 @@ The app is currently built around **Chief Ministers** and **Union Ministers**. (
 
 ```mermaid
 flowchart TD
-    A[User opens MyNetaDesk] --> B{Grant location?}
+    A[User opens MyNetaji] --> B{Grant location?}
     B -- yes --> C[POST /get-cm-location  lat,lng]
     C --> D[PostGIS: point-in-polygon over<br/>parliamentary_constituencies -> state_key]
     D --> E[Join chief_ministers on state_key]
@@ -132,7 +132,7 @@ Voting is intentionally frictionless: there is no login and no server-side ident
 
 ### Backend
 
-- **`app/main.py`** creates the FastAPI app (`title="MyNetaDesk"`), configures CORS from the `CORS_ORIGINS` env var, and registers routes via a side-effect import of `app/api/user.py`. It owns a **lifespan** that starts `app/tasks/daily_reset.py`.
+- **`app/main.py`** creates the FastAPI app (`title="MyNetaji"`), configures CORS from the `CORS_ORIGINS` env var, and registers routes via a side-effect import of `app/api/user.py`. It owns a **lifespan** that starts `app/tasks/daily_reset.py`.
 - **`app/api/user.py`** holds every route. Tables are reflected **once at module import** (not per-request) — reflecting these against Neon costs ~20s, so hoisting it keeps request latency low. Location endpoints construct a PostGIS point and use `ST_Contains` against the GIST-indexed `geom` column.
 - **`app/tasks/daily_reset.py`** is an asyncio loop that, at every local midnight, zeroes the `*_today` counters. It uses a Postgres **advisory lock** (`pg_try_advisory_xact_lock`) so multiple workers don't double-reset, plus a `daily_counter_resets` bookkeeping row to catch up on a boundary missed while the service was down.
 - **`app/db/connect.py`** builds the engine from `DB_URL` and exposes a `get_db` session dependency.
@@ -164,7 +164,7 @@ Live PostgreSQL/PostGIS tables (hosted on Neon):
 | `assembly_constituencies` | ~4,123 | ⚪ kept, unused | Assembly boundaries; retained from the earlier MLA feature. |
 | `mps` | 543 | ⚪ kept, unused | MP roster; MP endpoints still exist but the frontend no longer calls them. |
 
-> **Naming note:** `slap_count` / `rose_count` are the **voting mechanic**, not the brand — they are intentionally left as-is. The app name ("MyNetaDesk") lives only in UI copy and metadata; it does not appear in the schema. (The offline data pipeline still sends a legacy `myNeta-DataPipeline` User-Agent.)
+> **Naming note:** `slap_count` / `rose_count` are the **voting mechanic**, not the brand — they are intentionally left as-is. The app name ("MyNetaji") lives only in UI copy and metadata; it does not appear in the schema. (The offline data pipeline still sends a legacy `myNeta-DataPipeline` User-Agent.)
 
 ---
 
@@ -302,4 +302,4 @@ PYTHONPATH=app .venv/bin/python -m data_update.chief_minister_update
 
 ## Data provenance & disclaimer
 
-Political data (names, parties, portfolios, photos) is compiled from public sources — Wikipedia/Wikimedia Commons, [myneta.info](https://myneta.info) (ADR), and official government sites. Photos are hotlinked from Wikimedia Commons. MyNetaDesk is an independent civic-sentiment project and is not affiliated with any government body, political party, or the myneta.info platform. Verdicts (👋/🌹) are anonymous, unverified public sentiment and are not a poll, survey, or measure of electoral opinion.
+Political data (names, parties, portfolios, photos) is compiled from public sources — Wikipedia/Wikimedia Commons, [myneta.info](https://myneta.info) (ADR), and official government sites. Photos are hotlinked from Wikimedia Commons. MyNetaji is an independent civic-sentiment project and is not affiliated with any government body, political party, or the myneta.info platform. Verdicts (👋/🌹) are anonymous, unverified public sentiment and are not a poll, survey, or measure of electoral opinion.

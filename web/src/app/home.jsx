@@ -252,7 +252,7 @@ export function Home() {
 
       try {
         if (navigator.share) {
-          await navigator.share({ title: "MyNetaDesk", text, url });
+          await navigator.share({ title: "MyNetaji", text, url });
           return;
         }
       } catch {
@@ -458,7 +458,7 @@ function ResultsHeader({
     >
       <p className="flex items-center gap-1.5 font-display text-base font-bold tracking-tight text-ink">
         <span aria-hidden>👋</span>
-        MyNetaDesk
+        MyNetaji
       </p>
 
       {location ? (

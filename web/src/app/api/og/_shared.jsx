@@ -79,7 +79,7 @@ export function Wordmark({ size = 30 }) {
       <div style={{ display: "flex", fontFamily: "Fredoka", fontSize: size, color: BRAND.cream }}>
         <span>My</span>
         <span style={{ color: BRAND.saffron }}>Neta</span>
-        <span>Desk</span>
+        <span>ji</span>
       </div>
     </div>
   );

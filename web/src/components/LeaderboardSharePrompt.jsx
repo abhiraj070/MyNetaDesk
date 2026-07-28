@@ -107,7 +107,7 @@ export function LeaderboardSharePrompt({ open, tier = "cm", showToast }) {
             <div className="mt-5 flex flex-col items-stretch gap-2">
               <ShareButton
                 url={leaderboardShareUrl(tier)}
-                title="MyNetaDesk Leaderboard"
+                title="MyNetaji Leaderboard"
                 text="Think your friends back different leaders? Settle the debate 👇"
                 label="Share Leaderboard 🚀"
                 variant="primary"
