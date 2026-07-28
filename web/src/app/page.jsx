@@ -12,7 +12,12 @@ const SITE = "MyNetaji";
  * it into the absolute HTTPS URL crawlers require. Includes the OpenGraph
  * `type`/`siteName` explicitly so the page's block doesn't drop them.
  */
-function buildMeta({ title, description, image, url }) {
+function buildMeta({ title, description, image, url, alt }) {
+  // Declare `type` explicitly: the `/api/og` URL has no file extension, so this
+  // tells crawlers it's a JPEG without them having to sniff the URL. `alt`
+  // rounds out the tags Twitter/X and Discord look for.
+  const altText = alt || title;
+  const ogImage = { url: image, width: 1200, height: 630, alt: altText, type: "image/jpeg" };
   return {
     title,
     description,
@@ -22,13 +27,13 @@ function buildMeta({ title, description, image, url }) {
       url,
       title,
       description,
-      images: [{ url: image, width: 1200, height: 630 }],
+      images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: [{ url: image, alt: altText }],
     },
   };
 }

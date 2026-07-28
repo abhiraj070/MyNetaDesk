@@ -46,8 +46,7 @@ export async function GET(request) {
   const tierLabel = tier === "minister" ? "Union Ministers" : "Chief Ministers";
   const countKey = board === "rose" ? "rose_count" : "slap_count";
 
-  const image = new ImageResponse(
-    (
+  const element = (
       <div
         style={{
           width: "100%",
@@ -200,11 +199,13 @@ export async function GET(request) {
           Cast your verdict → mynetaji.up.railway.app
         </div>
       </div>
-    ),
-    {
-      ...OG_SIZE,
-      fonts,
-    },
   );
-  return toJpegResponse(image, CACHE_LIVE);
+
+  try {
+    const image = new ImageResponse(element, { ...OG_SIZE, fonts });
+    return toJpegResponse(image, CACHE_LIVE);
+  } catch {
+    // Never 500 for a crawler — fall back to the static poster.
+    return Response.redirect(new URL("/opengraph-image.jpg", request.url), 302);
+  }
 }

@@ -56,8 +56,7 @@ export async function GET(request) {
   // size down so the name always fits on at most two lines.
   const nameSize = name.length > 24 ? 48 : name.length > 16 ? 58 : 68;
 
-  const image = new ImageResponse(
-    (
+  const element = (
       <div
         style={{
           width: "100%",
@@ -198,11 +197,14 @@ export async function GET(request) {
           </div>
         </div>
       </div>
-    ),
-    {
-      ...OG_SIZE,
-      fonts,
-    },
   );
-  return toJpegResponse(image, CACHE_STATIC);
+
+  try {
+    const image = new ImageResponse(element, { ...OG_SIZE, fonts });
+    return toJpegResponse(image, CACHE_STATIC);
+  } catch {
+    // Never 500 for a crawler — fall back to the static poster so a preview
+    // still renders on every platform instead of breaking the embed.
+    return Response.redirect(new URL("/opengraph-image.jpg", request.url), 302);
+  }
 }
