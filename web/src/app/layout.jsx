@@ -24,9 +24,22 @@ const nunito = Nunito({
 });
 
 export const metadata = {
+  metadataBase: new URL("https://mynetadesk.in"),
   title: "MyNetaDesk",
   description:
     "Find the Chief Minister for wherever you're standing, read their record, and register a verdict.",
+  openGraph: {
+    type: "website",
+    siteName: "MyNetaDesk",
+    url: "/",
+    title: "Slap Your Leader — MyNetaDesk",
+    description: "India's most chaotic political game. 🌹 Rose or 👋 Slap?",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Slap Your Leader — MyNetaDesk",
+    description: "India's most chaotic political game. 🌹 Rose or 👋 Slap?",
+  },
 };
 
 export const viewport = {
