@@ -11,15 +11,36 @@ import {
 
 export const runtime = "nodejs";
 
+// Charcoal/graphite system — warmer and more "consumer app" than the old navy.
+const C = {
+  cream: "#F6F1E7",
+  amber: "#FFB020",
+  orange: "#FF7A1A",
+  teal: "#22C3AE",
+  place: "#B9B4AB",
+  frame: "#EFE9DC",
+  ctaText: "#241606",
+};
+
+// Subtle film grain. A full-size grayscale fractal-noise SVG inlined as a data
+// URL — resvg (behind ImageResponse) rasterises feTurbulence, so this reads as
+// real texture rather than a flat tint. Kept faint via the overlay's opacity.
+const NOISE_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>";
+const NOISE_URL = `data:image/svg+xml;base64,${Buffer.from(NOISE_SVG).toString("base64")}`;
+
 /**
- * `GET /api/og?name=&sub=&place=&photo=` — a dedicated, on-brand 1200×630 social
+ * `GET /api/og?name=&sub=&place=&photo=` — a dedicated, premium 1200×630 social
  * card for one politician. Reads only its query string (no DB query): the
  * homepage's `generateMetadata` resolves the politician once and passes the
  * display fields through here, so a crawler hit renders straight from the URL.
  *
- * The photo is the hero. If it can't be fetched we still render a branded card
- * rather than failing — but the homepage prefers the default poster when a
- * politician has no photo at all, so this path is the belt-and-suspenders case.
+ * Visual language is "consumer app, not campaign poster": charcoal atmosphere,
+ * warm ambient light, an elevated portrait as the hero, and a pill-button CTA
+ * as the second focal point. Layout (logo + info left, portrait right) is fixed.
+ *
+ * Satori note: every gradient value stays on ONE line — Satori silently fails
+ * to parse gradients that contain line breaks.
  */
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -36,261 +57,147 @@ export async function GET(request) {
 
   return new ImageResponse(
     (
-  <div
-    style={{
-      width: "100%",
-      height: "100%",
-      display: "flex",
-      flexDirection: "row",
-      position: "relative",
-      overflow: "hidden",
-      fontFamily: "Nunito",
-      padding: "54px 58px",
-
-      backgroundImage: `
-      radial-gradient(circle at 78% 40%, rgba(255,183,77,0.22) 0%, transparent 32%),
-      radial-gradient(circle at 15% 85%, rgba(0,212,181,0.10) 0%, transparent 28%),
-      linear-gradient(
-      135deg,
-      #07142F 0%,
-      #0F2352 42%,
-      #142F68 72%,
-      #091833 100%
-      )
-      `,
-    }}
-  >
-    {/* Grid */}
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        opacity: 0.05,
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px)",
-        backgroundSize: "52px 52px",
-      }}
-    />
-
-    {/* Background Glows */}
-    <div
-      style={{
-        position: "absolute",
-        top: -120,
-        right: -80,
-        width: 320,
-        height: 320,
-        borderRadius: "50%",
-        background: "rgba(255,181,46,.12)",
-        filter: "blur(70px)",
-      }}
-    />
-
-    <div
-      style={{
-        position: "absolute",
-        bottom: -120,
-        left: -80,
-        width: 260,
-        height: 260,
-        borderRadius: "50%",
-        background: "rgba(0,212,181,.12)",
-        filter: "blur(60px)",
-      }}
-    />
-
-    {/* Trending Badge */}
-    <div
-      style={{
-        position: "absolute",
-        top: 40,
-        right: 40,
-        display: "flex",
-        alignItems: "center",
-        padding: "10px 18px",
-        borderRadius: 999,
-        background: "rgba(255,181,46,.15)",
-        border: "1px solid rgba(255,181,46,.35)",
-        color: "#FFD36E",
-        fontSize: 20,
-        fontWeight: 900,
-      }}
-    >
-      🔥 Trending
-    </div>
-
-    {/* LEFT */}
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        width: 560,
-        height: "100%",
-        padding: "42px",
-        borderRadius: 34,
-        background: "rgba(255,255,255,.04)",
-        border: "1px solid rgba(255,255,255,.08)",
-      }}
-    >
-      <Wordmark size={34} />
-
-      {sub ? (
-        <div
-          style={{
-            display: "flex",
-            alignSelf: "flex-start",
-            marginTop: 28,
-            padding: "10px 22px",
-            borderRadius: 999,
-            background: "rgba(0,212,181,.12)",
-            border: "2px solid rgba(0,212,181,.45)",
-            color: BRAND.cream,
-            fontSize: 22,
-            fontWeight: 900,
-            letterSpacing: 0.5,
-          }}
-        >
-          {sub}
-        </div>
-      ) : null}
-
       <div
         style={{
+          width: "100%",
+          height: "100%",
           display: "flex",
-          marginTop: 24,
-          fontFamily: "Fredoka",
-          fontSize: nameSize,
-          color: BRAND.cream,
-          lineHeight: 1.02,
-          textShadow: "0 10px 28px rgba(0,0,0,.45)",
-        }}
-      >
-        {name}
-      </div>
-
-      {place ? (
-        <div
-          style={{
-            display: "flex",
-            marginTop: 14,
-            fontSize: 28,
-            color: "#C8D4EF",
-          }}
-        >
-          {place}
-        </div>
-      ) : null}
-
-      <div
-        style={{
-          display: "flex",
-          marginTop: 22,
-          fontSize: 20,
-          color: "#8FB0E4",
-        }}
-      >
-        India's most chaotic political platform.
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          alignSelf: "flex-start",
-          alignItems: "center",
-          marginTop: 30,
-          padding: "14px 24px",
-          borderRadius: 999,
-          background: "rgba(255,181,46,.12)",
-          border: "2px solid rgba(255,181,46,.28)",
-          color: BRAND.saffron,
-          fontSize: 26,
-          fontWeight: 900,
-        }}
-      >
-        🌹 Rose or 👋 Slap? You decide.
-      </div>
-    </div>
-
-    {/* RIGHT */}
-    <div
-      style={{
-        display: "flex",
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-      }}
-    >
-      {/* Portrait Glow */}
-      <div
-        style={{
-          position: "absolute",
-          width: 420,
-          height: 420,
-          borderRadius: "50%",
-          background:
-            "radial-gradient(circle, rgba(255,181,46,.30), transparent 72%)",
-          filter: "blur(35px)",
-        }}
-      />
-
-      {/* Accent Card */}
-      <div
-        style={{
-          position: "absolute",
-          width: 470,
-          height: 480,
-          borderRadius: 40,
-          backgroundColor: BRAND.saffron,
-          transform: "rotate(2deg) translate(12px,12px)",
-          opacity: 0.95,
-        }}
-      />
-
-      {/* Main Image */}
-      <div
-        style={{
-          display: "flex",
-          width: 470,
-          height: 480,
-          borderRadius: 40,
+          flexDirection: "row",
+          position: "relative",
           overflow: "hidden",
-          border: `8px solid ${BRAND.cream}`,
-          backgroundColor: BRAND.navy2,
-          boxShadow: "0 28px 70px rgba(0,0,0,.42)",
+          fontFamily: "Nunito",
+          padding: "54px 58px",
+          backgroundColor: "#0E0F13",
+          backgroundImage:
+            "radial-gradient(circle at 82% 40%, rgba(255,150,40,0.20) 0%, transparent 44%), radial-gradient(circle at 10% 88%, rgba(31,181,163,0.12) 0%, transparent 40%), radial-gradient(circle at 50% -12%, rgba(255,255,255,0.05) 0%, transparent 42%), linear-gradient(140deg, #0E0F13 0%, #17181F 46%, #1C1E27 72%, #0C0D11 100%)",
         }}
       >
-        {img ? (
-          <img
-            src={img}
-            width={470}
-            height={480}
-            style={{
-              width: 470,
-              height: 480,
-              objectFit: "cover",
-            }}
-            alt=""
-          />
-        ) : (
+        {/* blurred colored blobs — ambient depth, never brighter than the face */}
+        <div style={{ position: "absolute", top: -110, right: -60, width: 340, height: 340, borderRadius: "50%", backgroundColor: "rgba(255,140,30,0.16)", filter: "blur(85px)" }} />
+        <div style={{ position: "absolute", bottom: -120, left: -70, width: 300, height: 300, borderRadius: "50%", backgroundColor: "rgba(31,181,163,0.12)", filter: "blur(80px)" }} />
+        <div style={{ position: "absolute", top: 150, right: 150, width: 380, height: 380, borderRadius: "50%", backgroundColor: "rgba(255,110,20,0.14)", filter: "blur(95px)" }} />
+
+        {/* soft vignette (behind content so the hero never dims) */}
+        <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 200px 70px rgba(0,0,0,0.6)" }} />
+
+        {/* subtle grain */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={NOISE_URL} width={1200} height={630} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.06 }} />
+
+        {/* LEFT — logo + info on an ultra-subtle translucent surface */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            width: 560,
+            height: "100%",
+            padding: "44px",
+            borderRadius: 34,
+            backgroundColor: "rgba(255,255,255,0.035)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            boxShadow: "0 1px 0 rgba(255,255,255,0.05) inset",
+          }}
+        >
+          <Wordmark size={34} />
+
+          {sub ? (
+            <div
+              style={{
+                display: "flex",
+                alignSelf: "flex-start",
+                marginTop: 28,
+                padding: "10px 22px",
+                borderRadius: 999,
+                backgroundColor: "rgba(34,195,174,0.12)",
+                border: "1px solid rgba(34,195,174,0.45)",
+                color: C.cream,
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: 0.4,
+              }}
+            >
+              {sub}
+            </div>
+          ) : null}
+
           <div
             style={{
               display: "flex",
-              width: "100%",
-              height: "100%",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 150,
+              marginTop: 24,
+              fontFamily: "Fredoka",
+              fontSize: nameSize,
+              color: C.cream,
+              lineHeight: 1.02,
+              textShadow: "0 12px 30px rgba(0,0,0,0.5)",
             }}
           >
-            🧑‍⚖️
+            {name}
           </div>
-        )}
+
+          {place ? (
+            <div style={{ display: "flex", marginTop: 14, fontSize: 28, color: C.place }}>
+              {place}
+            </div>
+          ) : null}
+
+          {/* CTA — a real clickable-looking pill, the second focal point */}
+          <div
+            style={{
+              display: "flex",
+              alignSelf: "flex-start",
+              alignItems: "center",
+              marginTop: 32,
+              padding: "16px 28px",
+              borderRadius: 999,
+              backgroundImage: "linear-gradient(135deg, #FFC24A 0%, #FF8A1E 55%, #FF6A1A 100%)",
+              color: C.ctaText,
+              fontSize: 26,
+              fontWeight: 800,
+              boxShadow: "0 14px 34px rgba(255,138,30,0.38), inset 0 1px 0 rgba(255,255,255,0.45)",
+            }}
+          >
+            🌹 Rose or 👋 Slap? You decide.
+          </div>
+        </div>
+
+        {/* RIGHT — elevated portrait hero */}
+        <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", position: "relative" }}>
+          {/* glow behind the portrait */}
+          <div style={{ position: "absolute", width: 430, height: 430, borderRadius: "50%", backgroundImage: "radial-gradient(circle, rgba(255,168,40,0.42) 0%, transparent 68%)", filter: "blur(30px)" }} />
+
+          {/* layered accent card */}
+          <div style={{ position: "absolute", width: 470, height: 480, borderRadius: 42, backgroundImage: "linear-gradient(135deg, #FFB020 0%, #FF7A1A 100%)", transform: "rotate(2deg) translate(14px, 16px)", opacity: 0.9 }} />
+
+          {/* framed image */}
+          <div
+            style={{
+              display: "flex",
+              width: 470,
+              height: 480,
+              borderRadius: 42,
+              overflow: "hidden",
+              position: "relative",
+              border: `8px solid ${C.frame}`,
+              backgroundColor: BRAND.navy2,
+              boxShadow: "0 44px 90px -22px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)",
+            }}
+          >
+            {img ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img} width={470} height={480} alt="" style={{ width: 470, height: 480, objectFit: "cover" }} />
+            ) : (
+              <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 150 }}>
+                🧑‍⚖️
+              </div>
+            )}
+
+            {/* elegant top highlight */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 150, backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 100%)" }} />
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-),
+    ),
     {
       ...OG_SIZE,
       fonts,
