@@ -1,10 +1,31 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import sharp from "sharp";
+
 /**
  * Shared building blocks for the OG image routes (`/api/og`, `/api/og/leaderboard`).
  * Underscore-prefixed so the App Router never treats it as a route.
  */
+
+/**
+ * `ImageResponse` only emits PNG, and a photo-plus-grain card weighs ~1 MB — too
+ * heavy for WhatsApp (and slow for any crawler to fetch). Re-encode to JPEG so
+ * previews land around ~200 KB while looking identical. `sharp` ships with Next.
+ */
+export async function toJpegResponse(imageResponse, cacheControl) {
+  const png = Buffer.from(await imageResponse.arrayBuffer());
+  const jpeg = await sharp(png)
+    .flatten({ background: "#0E0F13" })
+    .jpeg({ quality: 80, progressive: true })
+    .toBuffer();
+  return new Response(jpeg, {
+    headers: {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": cacheControl,
+    },
+  });
+}
 
 /** The app's palette, matching `globals.css` — keeps social cards on-brand. */
 export const BRAND = {

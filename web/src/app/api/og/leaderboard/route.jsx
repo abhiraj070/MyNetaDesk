@@ -9,6 +9,7 @@ import {
   Wordmark,
   fetchImageDataUrl,
   loadFonts,
+  toJpegResponse,
 } from "../_shared";
 
 export const runtime = "nodejs";
@@ -45,7 +46,7 @@ export async function GET(request) {
   const tierLabel = tier === "minister" ? "Union Ministers" : "Chief Ministers";
   const countKey = board === "rose" ? "rose_count" : "slap_count";
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div
         style={{
@@ -203,7 +204,7 @@ export async function GET(request) {
     {
       ...OG_SIZE,
       fonts,
-      headers: { "Cache-Control": CACHE_LIVE },
     },
   );
+  return toJpegResponse(image, CACHE_LIVE);
 }

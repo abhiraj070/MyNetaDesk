@@ -7,6 +7,7 @@ import {
   Wordmark,
   fetchImageDataUrl,
   loadFonts,
+  toJpegResponse,
 } from "./_shared";
 
 export const runtime = "nodejs";
@@ -55,7 +56,7 @@ export async function GET(request) {
   // size down so the name always fits on at most two lines.
   const nameSize = name.length > 24 ? 48 : name.length > 16 ? 58 : 68;
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div
         style={{
@@ -201,7 +202,7 @@ export async function GET(request) {
     {
       ...OG_SIZE,
       fonts,
-      headers: { "Cache-Control": CACHE_STATIC },
     },
   );
+  return toJpegResponse(image, CACHE_STATIC);
 }
