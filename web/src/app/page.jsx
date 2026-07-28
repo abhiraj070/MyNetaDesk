@@ -1,16 +1,120 @@
 import { Suspense } from "react";
 
+import { getCmByState, getMinisterByName, ministerPortfolio } from "@/lib/og-data";
+
 import { Home } from "./home";
 
+const SITE = "MyNetaDesk";
+
 /**
- * A server shell whose only job is to keep this route prerenderable.
+ * Builds the metadata block shared by the politician and leaderboard share
+ * cards. `image` is a relative path; `metadataBase` (set in `layout.jsx`) turns
+ * it into the absolute HTTPS URL crawlers require. Includes the OpenGraph
+ * `type`/`siteName` explicitly so the page's block doesn't drop them.
+ */
+function buildMeta({ title, description, image, url }) {
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      siteName: SITE,
+      url,
+      title,
+      description,
+      images: [{ url: image, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
+
+function ogImageUrl({ tier, name, sub, place, photo }) {
+  const p = new URLSearchParams({ tier, name });
+  if (sub) p.set("sub", sub);
+  if (place) p.set("place", place);
+  if (photo) p.set("photo", photo);
+  return `/api/og?${p.toString()}`;
+}
+
+/**
+ * Per-share metadata for crawlers. The app deep-links via `/?share=…`, so a
+ * shared politician or leaderboard link is server-rendered here with its own
+ * `og:image`/`twitter:image` instead of the global poster.
+ *
+ * Reading `searchParams` opts this route into dynamic rendering — deliberate,
+ * and cheap: the default (no `share`) returns `{}` immediately so the root
+ * `opengraph-image.jpg` poster still applies. Any missing photo or lookup
+ * failure also falls back to that poster, so a preview is never broken.
+ */
+export async function generateMetadata({ searchParams }) {
+  const sp = (await searchParams) ?? {};
+  const share = sp.share;
+
+  try {
+    if (share === "minister" && sp.name) {
+      const m = await getMinisterByName(sp.name);
+      if (m?.photo_url) {
+        const image = ogImageUrl({
+          tier: "minister",
+          name: m.minister_name,
+          sub: "Union Minister",
+          place: ministerPortfolio(m.ministry),
+          photo: m.photo_url,
+        });
+        return buildMeta({
+          title: `${m.minister_name} — Union Minister | ${SITE}`,
+          description: `Slap or Rose ${m.minister_name}? Cast your verdict on ${SITE}.`,
+          image,
+          url: `/?share=minister&name=${encodeURIComponent(m.minister_name)}`,
+        });
+      }
+    } else if (share === "cm" && sp.state) {
+      const c = await getCmByState(sp.state);
+      if (c?.photo_url) {
+        const image = ogImageUrl({
+          tier: "cm",
+          name: c.name,
+          sub: c.designation || "Chief Minister",
+          place: c.state,
+          photo: c.photo_url,
+        });
+        return buildMeta({
+          title: `${c.name} — ${c.designation || "Chief Minister"} · ${c.state} | ${SITE}`,
+          description: `Slap or Rose ${c.name}? Cast your verdict on ${SITE}.`,
+          image,
+          url: `/?share=cm&state=${encodeURIComponent(c.state_key)}`,
+        });
+      }
+    } else if (share === "leaderboard") {
+      const tier = sp.tier === "minister" ? "minister" : "cm";
+      const board = sp.board === "rose" ? "rose" : "slap";
+      const tierLabel = tier === "minister" ? "Union Ministers" : "Chief Ministers";
+      return buildMeta({
+        title: `${SITE} Leaderboard — ${tierLabel}`,
+        description: "See who India is slapping and rosing right now. 👋🌹",
+        image: `/api/og/leaderboard?tier=${tier}&board=${board}`,
+        url: `/?share=leaderboard&tier=${tier}`,
+      });
+    }
+  } catch {
+    // fall through to the default poster
+  }
+
+  return {};
+}
+
+/**
+ * A server shell whose only job is to render the client app.
  *
  * `Home` reads the `?share=` deep link through `useSearchParams()`, which
- * requires a Suspense boundary: everything inside it renders on the client,
- * while this shell stays static and CDN-cacheable. Taking `searchParams` as a
- * page prop instead — even just to forward it — marks the whole route
- * dynamic, and reading `window.location` in the client is what caused the
- * hydration mismatch both of these replaced.
+ * requires a Suspense boundary: everything inside it renders on the client.
+ * (This route is now dynamically rendered because `generateMetadata` above
+ * reads `searchParams` to build per-share previews — see that comment.)
  */
 export default function Page() {
   return (

@@ -9,6 +9,7 @@ import { BottomActions } from "@/components/BottomActions";
 import { InfoSheet } from "@/components/InfoSheet";
 import { Landing } from "@/components/Landing";
 import { LeaderboardSheet } from "@/components/LeaderboardSheet";
+import { LeaderboardSharePrompt } from "@/components/LeaderboardSharePrompt";
 import { RepresentativeCard } from "@/components/RepresentativeCard";
 import { SearchSheet } from "@/components/SearchSheet";
 import { ErrorScreen, LocatingScreen } from "@/components/StatusScreens";
@@ -54,13 +55,17 @@ function readDeepLink(params) {
   if (share === "cm") {
     const lat = parseFloat(params.get("lat"));
     const lng = parseFloat(params.get("lng"));
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      return { coords: { latitude: lat, longitude: lng }, ministerName: null };
-    }
+    const coords =
+      Number.isFinite(lat) && Number.isFinite(lng)
+        ? { latitude: lat, longitude: lng }
+        : null;
+    // `state` seeds the exact CM (e.g. a link shared from the leaderboard, which
+    // carries no coordinates); `lat/lng` still seed from the sharer's location.
+    return { coords, ministerName: null, cmStateKey: params.get("state") };
   } else if (share === "minister") {
-    return { coords: null, ministerName: params.get("name") };
+    return { coords: null, ministerName: params.get("name"), cmStateKey: null };
   }
-  return { coords: null, ministerName: null };
+  return { coords: null, ministerName: null, cmStateKey: null };
 }
 
 export function Home() {
@@ -88,6 +93,12 @@ export function Home() {
   const [pendingMinisterName, setPendingMinisterName] = useState(
     deepLink.ministerName,
   );
+  // A `?share=cm&state=` deep link with no coordinates — seed that exact CM by
+  // key. Skipped when coords are present, since the location query already
+  // resolves the same card.
+  const [pendingCmState, setPendingCmState] = useState(
+    deepLink.coords ? null : deepLink.cmStateKey,
+  );
 
   // Pre-fetched here (not only when the Search sheet opens) so a
   // `?share=minister&name=` deep link can resolve on first render, before
@@ -108,6 +119,18 @@ export function Home() {
     } else {
       setPendingMinisterName(null);
     }
+  }
+
+  // Resolves a `?share=cm&state=` deep link (same fetch the leaderboard uses to
+  // open a CM), then swaps that CM in the same render-time pattern as above.
+  const { data: seededCm } = useQuery({
+    queryKey: ["cm-by-state", pendingCmState],
+    queryFn: () => fetchCmByStateKey(pendingCmState),
+    enabled: Boolean(pendingCmState),
+  });
+  if (pendingCmState && seededCm) {
+    setSelectedSearchResult({ tier: "cm", data: seededCm });
+    setPendingCmState(null);
   }
 
   const {
@@ -266,6 +289,9 @@ export function Home() {
     isLoadingSeats,
     isError,
     hasSubject: Boolean(subject),
+    // A pending CM-by-state seed shows the loading screen, not the location
+    // prompt, until its fetch resolves into the card.
+    isSeeding: Boolean(pendingCmState),
   });
 
   return (
@@ -366,6 +392,12 @@ export function Home() {
             currentIdentity={subject.name}
             onSelectTopper={handleSelectTopper}
             pendingKey={pendingTopperKey}
+            showToast={showToast}
+          />
+          <LeaderboardSharePrompt
+            open={openSheet === "leaderboard"}
+            tier={subject.tier === "minister" ? "minister" : "cm"}
+            showToast={showToast}
           />
           <SearchSheet
             open={openSheet === "search"}
@@ -484,9 +516,15 @@ function buildShareUrl(subject, coords) {
   if (typeof window === "undefined") return "";
   const origin = window.location.origin;
   const params = new URLSearchParams({ share: subject.tier });
-  if (subject.tier === "cm" && coords) {
-    params.set("lat", String(coords.latitude));
-    params.set("lng", String(coords.longitude));
+  if (subject.tier === "cm") {
+    // `state` drives the server-side share preview (`generateMetadata` fetches
+    // the CM by this indexed key — no geo query). `lat/lng` stay for the
+    // recipient's client, which still seeds the card from the sharer's spot.
+    if (subject.state_key) params.set("state", subject.state_key);
+    if (coords) {
+      params.set("lat", String(coords.latitude));
+      params.set("lng", String(coords.longitude));
+    }
   } else if (subject.tier === "minister") {
     params.set("name", subject.name);
   }
@@ -545,11 +583,13 @@ function resolveStage({
   isLoadingSeats,
   isError,
   hasSubject,
+  isSeeding,
 }) {
   // A resolved subject wins outright: a minister deep link isn't
   // location-derived, so it must reach the card without ever waiting on
   // (or requiring) `coords`.
   if (hasSubject) return "results";
+  if (isSeeding) return "locating";
   if (geoError) return "geo-error";
   if (isLocating) return "locating";
   if (!coords) return "landing";

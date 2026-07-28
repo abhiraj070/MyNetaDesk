@@ -11,6 +11,7 @@ export function LeaderboardSheet({
   currentIdentity,
   onSelectTopper,
   pendingKey,
+  showToast,
 }) {
   return (
     <BottomSheet
@@ -28,6 +29,7 @@ export function LeaderboardSheet({
         highlightName={currentIdentity}
         onSelectTopper={onSelectTopper}
         pendingKey={pendingKey}
+        showToast={showToast}
       />
     </BottomSheet>
   );

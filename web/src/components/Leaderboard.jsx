@@ -6,7 +6,10 @@ import { useId, useState } from "react";
 
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { SPRING_POP } from "@/lib/motion";
+import { leaderboardShareUrl } from "@/lib/share";
 import { toFriendlyError } from "@/lib/api";
+
+import { ShareButton } from "./ShareButton";
 
 const TIER_COPY = {
   cm: { scope: "Chief Ministers across India's states" },
@@ -42,12 +45,25 @@ export function Leaderboard({
   highlightName = null,
   onSelectTopper,
   pendingKey,
+  showToast,
 }) {
   const [tier, setTier] = useState(defaultTier);
   const [board, setBoard] = useState("slap");
 
   return (
     <div>
+      {/* Shares the live top-3 preview for whichever tier is on screen. */}
+      <div className="mb-3 flex justify-end">
+        <ShareButton
+          url={leaderboardShareUrl(tier)}
+          title="MyNetaDesk Leaderboard"
+          text="Who's getting slapped and rosed across India? See the leaderboard 👀"
+          label="Share"
+          variant="soft"
+          showToast={showToast}
+        />
+      </div>
+
       <div className="flex justify-center">
         <PillTabs
           options={TIERS}

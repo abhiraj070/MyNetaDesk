@@ -23,8 +23,17 @@ const nunito = Nunito({
   display: "swap",
 });
 
+// Canonical production origin used to turn relative OG/Twitter image paths into
+// the absolute HTTPS URLs that scrapers (WhatsApp, etc.) require. Must be the
+// live domain that actually serves this deployment — `mynetadesk.in` is not yet
+// provisioned (NXDOMAIN), so absolute image URLs on it were unreachable. Point
+// at the Railway URL that serves the app; override with NEXT_PUBLIC_SITE_URL
+// once a custom domain is live.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://mynetadesk.up.railway.app";
+
 export const metadata = {
-  metadataBase: new URL("https://mynetadesk.in"),
+  metadataBase: new URL(siteUrl),
   title: "MyNetaDesk",
   description:
     "Find the Chief Minister for wherever you're standing, read their record, and register a verdict.",
