@@ -196,7 +196,7 @@ export async function GET(request) {
             color: BRAND.saffron,
           }}
         >
-          Cast your verdict → mynetadesk.up.railway.app
+          Cast your verdict → mynetaji.up.railway.app
         </div>
       </div>
     ),
