@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { getCmByState, getMinisterByName, ministerPortfolio } from "@/lib/og-data";
+import { getCmByState, getMinisterByName } from "@/lib/og-data";
 
 import { Home } from "./home";
 
@@ -38,11 +38,15 @@ function buildMeta({ title, description, image, url, alt }) {
   };
 }
 
-function ogImageUrl({ tier, name, sub, place, photo }) {
-  const p = new URLSearchParams({ tier, name });
-  if (sub) p.set("sub", sub);
-  if (place) p.set("place", place);
-  if (photo) p.set("photo", photo);
+/**
+ * Short, clean OG image URL — just the identity (`tier` + state/name). The
+ * `/api/og` route looks the record up itself (cached), so the URL stays under
+ * ~60 chars instead of embedding a long, double-encoded photo URL that strict
+ * scrapers (Reddit especially) truncate or reject.
+ */
+function ogImageUrl(tier, id) {
+  const p = new URLSearchParams({ tier });
+  p.set(tier === "cm" ? "state" : "name", id);
   return `/api/og?${p.toString()}`;
 }
 
@@ -64,13 +68,7 @@ export async function generateMetadata({ searchParams }) {
     if (share === "minister" && sp.name) {
       const m = await getMinisterByName(sp.name);
       if (m?.photo_url) {
-        const image = ogImageUrl({
-          tier: "minister",
-          name: m.minister_name,
-          sub: "Union Minister",
-          place: ministerPortfolio(m.ministry),
-          photo: m.photo_url,
-        });
+        const image = ogImageUrl("minister", m.minister_name);
         return buildMeta({
           title: `${m.minister_name} — Union Minister | ${SITE}`,
           description: `Slap or Rose ${m.minister_name}? Cast your verdict on ${SITE}.`,
@@ -81,13 +79,7 @@ export async function generateMetadata({ searchParams }) {
     } else if (share === "cm" && sp.state) {
       const c = await getCmByState(sp.state);
       if (c?.photo_url) {
-        const image = ogImageUrl({
-          tier: "cm",
-          name: c.name,
-          sub: c.designation || "Chief Minister",
-          place: c.state,
-          photo: c.photo_url,
-        });
+        const image = ogImageUrl("cm", c.state_key);
         return buildMeta({
           title: `${c.name} — ${c.designation || "Chief Minister"} · ${c.state} | ${SITE}`,
           description: `Slap or Rose ${c.name}? Cast your verdict on ${SITE}.`,

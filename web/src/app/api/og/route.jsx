@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { getCmByState, getMinisterByName, ministerPortfolio } from "@/lib/og-data";
+
 import {
   BRAND,
   CACHE_STATIC,
@@ -45,10 +47,44 @@ const NOISE_URL = `data:image/svg+xml;base64,${Buffer.from(NOISE_SVG).toString("
  */
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const name = (searchParams.get("name") || "This leader").slice(0, 60);
-  const sub = (searchParams.get("sub") || "").slice(0, 48);
-  const place = (searchParams.get("place") || "").slice(0, 48);
-  const photo = searchParams.get("photo") || "";
+  const tier = searchParams.get("tier") || "cm";
+
+  // Preferred short form (`?tier=cm&state=GOA` / `?tier=minister&name=X`): look
+  // the record up here — cached, and de-duped with the same fetch `generateMetadata`
+  // already made — so the og:image URL stays tiny and scraper-safe. Falls back to
+  // explicit `name/sub/place/photo` params for any older, long-form links.
+  let name = searchParams.get("name") || "";
+  let sub = searchParams.get("sub") || "";
+  let place = searchParams.get("place") || "";
+  let photo = searchParams.get("photo") || "";
+
+  if (!photo) {
+    try {
+      if (tier === "cm") {
+        const c = await getCmByState(searchParams.get("state"));
+        if (c) {
+          name = c.name;
+          sub = c.designation || "Chief Minister";
+          place = c.state || "";
+          photo = c.photo_url || "";
+        }
+      } else if (tier === "minister") {
+        const m = await getMinisterByName(searchParams.get("name"));
+        if (m) {
+          name = m.minister_name;
+          sub = "Union Minister";
+          place = ministerPortfolio(m.ministry);
+          photo = m.photo_url || "";
+        }
+      }
+    } catch {
+      /* fall through — the crash-guard below still returns a valid image */
+    }
+  }
+
+  name = (name || "This leader").slice(0, 60);
+  sub = sub.slice(0, 48);
+  place = place.slice(0, 48);
 
   const [fonts, img] = await Promise.all([loadFonts(), fetchImageDataUrl(photo)]);
 
