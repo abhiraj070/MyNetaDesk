@@ -48,10 +48,15 @@ export async function GET(request) {
       padding: "54px 58px",
 
       backgroundImage: `
-        radial-gradient(circle at 18% 15%, rgba(0,212,181,.14), transparent 30%),
-        radial-gradient(circle at 88% 12%, rgba(255,181,46,.18), transparent 32%),
-        radial-gradient(circle at 50% 120%, rgba(255,255,255,.05), transparent 45%),
-        linear-gradient(135deg,#08152F 0%,#142B62 55%,#08152F 100%)
+      radial-gradient(circle at 78% 40%, rgba(255,183,77,0.22) 0%, transparent 32%),
+      radial-gradient(circle at 15% 85%, rgba(0,212,181,0.10) 0%, transparent 28%),
+      linear-gradient(
+      135deg,
+      #07142F 0%,
+      #0F2352 42%,
+      #142F68 72%,
+      #091833 100%
+      )
       `,
     }}
   >
