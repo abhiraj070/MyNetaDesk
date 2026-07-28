@@ -20,6 +20,12 @@ import { SPRING_POP, SPRING_PRESS } from "@/lib/motion";
  * press during the send animation still records — it just doesn't launch a
  * second projectile. The picked side keeps a coloured glow so your last
  * verdict is still legible.
+ *
+ * Picking a side commits to it: once you slap (or rose) a representative, the
+ * opposite disc is disabled and dimmed for the rest of that card's life, so a
+ * verdict is one-directional. You can keep tapping the side you chose; the lock
+ * is per-representative and clears when the card is swapped for another subject
+ * (`RepresentativeCard` remounts, resetting `choice`).
  */
 const OPTIONS = [
   {
@@ -62,6 +68,8 @@ export function VoteButtons({
             option={option}
             count={counts[option.choice]}
             isPicked={choice === option.choice}
+            /* A side has been chosen and it isn't this one → lock this disc. */
+            disabled={choice !== null && choice !== option.choice}
             onVote={onVote}
             buttonsRef={buttonsRef}
           />
@@ -88,10 +96,11 @@ export function VoteButtons({
  * to the button rather than lifted to `VoteButtons` since neither side needs
  * to know about the other's ripples.
  */
-function VoteButton({ option, count, isPicked, onVote, buttonsRef }) {
+function VoteButton({ option, count, isPicked, disabled, onVote, buttonsRef }) {
   const [ripples, setRipples] = useState([]);
 
   const handleClick = () => {
+    if (disabled) return;
     setRipples((prev) => [...prev, Date.now() + Math.random()]);
     onVote(option.choice);
   };
@@ -115,39 +124,50 @@ function VoteButton({ option, count, isPicked, onVote, buttonsRef }) {
         }}
         type="button"
         onClick={handleClick}
+        disabled={disabled}
         aria-pressed={isPicked}
         aria-label={`${option.label} this representative`}
         initial={false}
-        /* One resting state now. Neither disc is ever disabled or dimmed —
-           picking a side no longer locks the other out, and a press landing
-           mid-flight still counts (see `play` in useVoteChoreography), so
-           there is nothing left for a greyed-out state to communicate. The
-           picked side is marked by its glow alone. */
+        /* Dimming (opacity/grayscale) lives on the className below rather than
+           here: framer holds an inline `opacity` that would override a Tailwind
+           opacity class, so keeping opacity out of `animate` lets the disabled
+           class win. Picking a side disables the other — see `disabled` in
+           `VoteButtons` — so the greyed-out state means "you committed to the
+           other verdict," and the picked side keeps its glow. */
         animate={{
-          opacity: 1,
           scaleX: 1,
           scaleY: 1,
           y: 0,
           boxShadow: edgeShadow(EDGE_REST),
         }}
-        whileHover={{
-          y: -4,
-          scaleX: 1.03,
-          scaleY: 1.03,
-          boxShadow: edgeShadow(EDGE_REST + 4),
-          transition: SPRING_POP,
-        }}
+        /* No hover/press motion once locked — a disc you can't use shouldn't
+           invite the press. */
+        whileHover={
+          disabled
+            ? undefined
+            : {
+                y: -4,
+                scaleX: 1.03,
+                scaleY: 1.03,
+                boxShadow: edgeShadow(EDGE_REST + 4),
+                transition: SPRING_POP,
+              }
+        }
         /* The squish: the disc flattens as it drives down onto its edge, then
            springs back through a slight overshoot on release. */
-        whileTap={{
-          y: EDGE_REST - EDGE_PRESSED,
-          scaleX: 1.06,
-          scaleY: 0.92,
-          boxShadow: edgeShadow(EDGE_PRESSED),
-          transition: SPRING_PRESS,
-        }}
+        whileTap={
+          disabled
+            ? undefined
+            : {
+                y: EDGE_REST - EDGE_PRESSED,
+                scaleX: 1.06,
+                scaleY: 0.92,
+                boxShadow: edgeShadow(EDGE_PRESSED),
+                transition: SPRING_PRESS,
+              }
+        }
         transition={SPRING_POP}
-        className={`relative flex size-28 flex-col items-center justify-center gap-1 overflow-hidden rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink sm:size-32 ${option.face}`}
+        className={`relative flex size-28 flex-col items-center justify-center gap-1 overflow-hidden rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink sm:size-32 ${option.face} ${disabled ? "cursor-not-allowed opacity-40 grayscale-[0.4]" : ""}`}
       >
         <AnimatePresence>
           {ripples.map((id) => (

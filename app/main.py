@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -6,8 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.settings import get_settings
 from app.tasks import daily_reset
-
-logger = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager
@@ -31,7 +28,6 @@ origins = [
     for origin in get_settings().CORS_ORIGINS.split(",")
     if origin.strip()
 ]
-logger.info("CORS allow_origins: %s", origins)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,5 +37,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api import user  
+from app.api import user
 
