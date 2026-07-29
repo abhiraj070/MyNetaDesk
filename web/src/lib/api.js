@@ -111,6 +111,19 @@ export async function castCmVote({ name, stateKey, choice }) {
 }
 
 /**
+ * `POST /feedback` — records app feedback: a reaction plus a short note. The UI
+ * carries the reaction lowercase ("slap"/"rose"); the API's enum is uppercase,
+ * so we normalise here.
+ */
+export async function sendFeedback({ reaction, message }) {
+  const { data } = await api.post("/feedback", {
+    reaction: String(reaction).toUpperCase(),
+    message,
+  });
+  return data;
+}
+
+/**
  * `POST /get-ministers-by-name` — the full record for one minister, identified
  * by (name, ministry) — `ministry` must be the row's full original portfolio
  * string, same convention as `castMinistryVote`. Returns `{ minister_details }`,

@@ -9,8 +9,6 @@ class LocationRequest(BaseModel):
 
 
 class MinistrySearchRequest(BaseModel):
-    # Optional: omit it to get the whole council of ministers, which is what
-    # the web client's ministry picker loads once up front.
     name: Optional[str] = None
 
 class UpdateMemberRequest(BaseModel):
@@ -43,3 +41,7 @@ class UpdateCmRequest(BaseModel):
 class TweetRequest(BaseModel):
     name: str
     table: str
+
+class FeedbackRequest(BaseModel):
+    reaction: str
+    message: str

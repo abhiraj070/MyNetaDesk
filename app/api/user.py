@@ -1,5 +1,5 @@
 from app.main import app
-from app.schema import LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest, GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest, TweetRequest
+from app.schema import LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest, GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest, TweetRequest, FeedbackRequest
 from app.db.connect import get_db, engine
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, Query
@@ -7,6 +7,7 @@ from sqlalchemy import MetaData, Table, select, func, update
 from sqlalchemy.exc import SQLAlchemyError
 import httpx
 from app.config.settings import get_settings
+from app.model.feedback import Feedback
 
 _settings= get_settings()
 
@@ -404,44 +405,44 @@ async def get_tweets(request: TweetRequest, db: Session= Depends(get_db)):
     URL="https://api.x.com/2/tweets/search/recent"
     headers={"Authorization": f"Bearer {BEARER_TOKEN}"}
     params = {
-    "query": f"@{username} -is:retweet",
-    "sort_order": "relevancy",
-    "max_results": 10,
+        "query": f"@{username} -is:retweet",
+        "sort_order": "relevancy",
+        "max_results": 10,
 
-    "tweet.fields": (
-        "created_at,"
-        "public_metrics,"
-        "author_id,"
-        "attachments,"
-        "referenced_tweets"
-    ),
+        "tweet.fields": (
+            "created_at,"
+            "public_metrics,"
+            "author_id,"
+            "attachments,"
+            "referenced_tweets"
+        ),
 
-    "expansions": (
-        "author_id,"
-        "attachments.media_keys,"
-        "referenced_tweets.id,"
-        "referenced_tweets.id.author_id"
-    ),
+        "expansions": (
+            "author_id,"
+            "attachments.media_keys,"
+            "referenced_tweets.id,"
+            "referenced_tweets.id.author_id"
+        ),
 
-    "user.fields": (
-        "id,"
-        "name,"
-        "username,"
-        "profile_image_url,"
-        "verified,"
-        "verified_type"
-    ),
+        "user.fields": (
+            "id,"
+            "name,"
+            "username,"
+            "profile_image_url,"
+            "verified,"
+            "verified_type"
+        ),
 
-    "media.fields": (
-        "media_key,"
-        "type,"
-        "url,"
-        "preview_image_url,"
-        "width,"
-        "height,"
-        "alt_text"
-    ),
-}
+        "media.fields": (
+            "media_key,"
+            "type,"
+            "url,"
+            "preview_image_url,"
+            "width,"
+            "height,"
+            "alt_text"
+        ),
+    }
     async with httpx.AsyncClient(timeout=10) as client:
         response= await client.get(
             URL,
@@ -451,4 +452,11 @@ async def get_tweets(request: TweetRequest, db: Session= Depends(get_db)):
     data= response.json()
     return {"top_tweets": data}
     
-    
+@app.post("/feedback")
+def feedback(request: FeedbackRequest, db: Session= Depends(get_db)):
+    message= request.message
+    reaction= request.reaction
+    feedback= Feedback(message=message, reaction= reaction)
+    db.add(feedback)
+    db.commit()
+    db.refresh(feedback)
