@@ -1,6 +1,6 @@
 from app.db.connect import Base
-from sqlalchemy import Column, String, DateTime, Enum as SqlEnum
-from datetime import datetime, timezone, Integer
+from sqlalchemy import Column, String, Integer, DateTime, Enum as SqlEnum
+from datetime import datetime, timezone
 from enum import Enum
 
 class Reaction(str, Enum):
