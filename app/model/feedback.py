@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from enum import Enum
 
 class Reaction(str, Enum):
-    Slap= "Slap"
-    rose= "Rose"
+    SLAP = "SLAP"
+    ROSE = "ROSE"
 
 class Feedback(Base):
     __tablename__="feedback"

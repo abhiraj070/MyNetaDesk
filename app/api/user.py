@@ -454,9 +454,17 @@ async def get_tweets(request: TweetRequest, db: Session= Depends(get_db)):
     
 @app.post("/feedback")
 def feedback(request: FeedbackRequest, db: Session= Depends(get_db)):
-    message= request.message
     reaction= request.reaction
-    feedback= Feedback(message=message, reaction= reaction)
-    db.add(feedback)
-    db.commit()
-    db.refresh(feedback)
+    if reaction not in ("SLAP", "ROSE"):
+        raise HTTPException(status_code=400, detail="reaction must be 'SLAP' or 'ROSE'")
+    try:
+        entry= Feedback(message=request.message, reaction=reaction)
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        return {"ok": True, "id": entry.id}
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
