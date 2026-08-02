@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 
 import { Button } from "./ui/Button";
+import { TodaysHighlight } from "./TodaysHighlight";
 import { rise } from "@/lib/motion";
 
 const shell = "mx-auto w-full max-w-xl px-5 py-24 sm:px-8";
@@ -17,11 +18,39 @@ function Skeleton({ className = "" }) {
 }
 
 /**
- * Rather than a lonely spinner over empty space, the locating state renders the
- * skeleton of the page it's about to become — the same app-bar row, hero card
- * and verdict discs, in the same footprint — with the live status sitting
- * inside the card. When the real data lands the layout barely shifts, so the
- * wait reads as the page assembling itself rather than a blank interstitial.
+ * A static, disabled stand-in for `BottomActions` — same pill, same five
+ * icon slots, same spacing, so nothing reflows when the real bar (with its
+ * live Share state) swaps in. `aria-hidden`: there's nothing here to press.
+ */
+function BottomActionsSkeleton() {
+  return (
+    <nav aria-hidden className="shrink-0 pt-1.5 pb-2.5">
+      <div className="relative flex items-center justify-around gap-2 rounded-full bg-linear-to-b from-white/92 to-surface/80 px-3 py-2 shadow-lift ring-1 ring-ink/5 backdrop-blur-xl">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-6 top-px h-px rounded-full bg-white/70"
+        />
+        {Array.from({ length: 5 }, (_, i) => (
+          <Skeleton key={i} className="size-11 rounded-full" />
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+/**
+ * Rather than a lonely spinner over empty space, the locating state renders
+ * the skeleton of the page it's about to become — the same app-bar row, hero
+ * card, verdict discs, highlight row and bottom bar, in the same footprint —
+ * with the live status sitting inside the card. When the real data lands the
+ * layout barely shifts, so the wait reads as the page assembling itself
+ * rather than a blank interstitial.
+ *
+ * `TodaysHighlight` is the real component, not a mimic: it fetches
+ * independently of the CM/location lookup this screen is waiting on and
+ * already renders its own shimmer per-tile while its own data is in flight,
+ * so reusing it here is both more accurate than a hand-built placeholder and
+ * one less thing to keep in sync with the real layout.
  */
 export function LocatingScreen({ label, detail }) {
   return (
@@ -37,9 +66,18 @@ export function LocatingScreen({ label, detail }) {
         <Skeleton className="h-7 w-28 rounded-full" />
       </div>
 
-      <div className="flex min-h-[56dvh] flex-1 flex-col items-center justify-center gap-5 rounded-card bg-surface px-5 py-6 shadow-hero ring-1 ring-inset ring-ink/5 sm:px-8 sm:py-8">
+      <div className="relative flex min-h-[56dvh] flex-1 flex-col items-center justify-center gap-5 rounded-card bg-surface px-5 py-6 shadow-hero ring-1 ring-inset ring-ink/5 sm:px-8 sm:py-8">
+        {/* Mirrors the real card's "Featured" sticker — absolutely
+            positioned there too, so it never nudges the content below it. */}
+        <Skeleton className="absolute -top-2.5 left-4 h-6 w-20 rounded-full sm:left-6" />
+
         <Skeleton className="aspect-[3/4] w-[46vw] max-w-[12.5rem] rounded-photo sm:w-52" />
 
+        {/* The live status — pin, label, detail, progress — stands in for
+            the name/designation lines the real card shows here: keeping this
+            block at the same height budget the original design had is what
+            keeps the card from growing taller than the real one and pushing
+            the sticky bottom bar into the highlight row below. */}
         <div className="flex flex-col items-center gap-2.5 text-center">
           <motion.p
             aria-hidden
@@ -75,6 +113,12 @@ export function LocatingScreen({ label, detail }) {
       <div className="mx-auto flex w-full max-w-md shrink-0 items-center justify-center gap-8 sm:gap-12">
         <Skeleton className="size-28 rounded-full sm:size-32" />
         <Skeleton className="size-28 rounded-full sm:size-32" />
+      </div>
+
+      <TodaysHighlight onSelectSubject={undefined} pendingKey={null} />
+
+      <div className="sticky bottom-0 z-30">
+        <BottomActionsSkeleton />
       </div>
     </motion.div>
   );

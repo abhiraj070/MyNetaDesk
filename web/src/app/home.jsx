@@ -6,10 +6,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useState } from "react";
 
 import { BottomActions } from "@/components/BottomActions";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
+import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
+import { FeedbackSuccess } from "@/components/feedback/FeedbackSuccess";
 import { InfoSheet } from "@/components/InfoSheet";
 import { Landing } from "@/components/Landing";
 import { LeaderboardSheet } from "@/components/LeaderboardSheet";
-import { LeaderboardSharePrompt } from "@/components/LeaderboardSharePrompt";
 import { RepresentativeCard } from "@/components/RepresentativeCard";
 import { SearchSheet } from "@/components/SearchSheet";
 import { ErrorScreen, LocatingScreen } from "@/components/StatusScreens";
@@ -99,6 +101,8 @@ export function Home() {
   const [pendingCmState, setPendingCmState] = useState(
     deepLink.coords ? null : deepLink.cmStateKey,
   );
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackReaction, setFeedbackReaction] = useState(null);
 
   // Pre-fetched here (not only when the Search sheet opens) so a
   // `?share=minister&name=` deep link can resolve on first render, before
@@ -282,6 +286,13 @@ export function Home() {
     [subjectKey, showToast],
   );
 
+  // Let the sheet finish sliding out before the celebration springs in, so
+  // the two backdrops never stack for a frame.
+  const handleFeedbackSubmitted = useCallback((reaction) => {
+    setFeedbackOpen(false);
+    setTimeout(() => setFeedbackReaction(reaction), 240);
+  }, []);
+
   const stage = resolveStage({
     geoError,
     isLocating,
@@ -350,6 +361,7 @@ export function Home() {
                   : null
             }
             backLabel={leaderboardSubject ? "← Back" : "← Back to your CM"}
+            onOpenFeedback={() => setFeedbackOpen(true)}
           />
 
           <RepresentativeCard
@@ -394,11 +406,6 @@ export function Home() {
             pendingKey={pendingTopperKey}
             showToast={showToast}
           />
-          <LeaderboardSharePrompt
-            open={openSheet === "leaderboard"}
-            tier={subject.tier === "minister" ? "minister" : "cm"}
-            showToast={showToast}
-          />
           <SearchSheet
             open={openSheet === "search"}
             onClose={closeSheet}
@@ -421,6 +428,16 @@ export function Home() {
           />
 
           <Toast message={toast} />
+
+          <FeedbackSheet
+            open={feedbackOpen}
+            onClose={() => setFeedbackOpen(false)}
+            onSubmitted={handleFeedbackSubmitted}
+          />
+          <FeedbackSuccess
+            reaction={feedbackReaction}
+            onClose={() => setFeedbackReaction(null)}
+          />
         </div>
       )}
     </main>
@@ -444,6 +461,7 @@ function ResultsHeader({
   subject,
   onResetToHome,
   backLabel = "← Back to your CM",
+  onOpenFeedback,
 }) {
   // The state chip only ever applies to the actual home CM (resolved from
   // the user's own location) — a minister, a searched-in CM, or a
@@ -461,19 +479,23 @@ function ResultsHeader({
         MyNetaji
       </p>
 
-      {location ? (
-        <span className={CHIP_CLASS}>{location}</span>
-      ) : onResetToHome ? (
-        <button
-          type="button"
-          onClick={onResetToHome}
-          className={`${CHIP_CLASS} text-muted transition-colors hover:text-ink`}
-        >
-          {backLabel}
-        </button>
-      ) : (
-        <span aria-hidden />
-      )}
+      <div className="flex items-center gap-2">
+        <FeedbackButton onClick={onOpenFeedback} />
+
+        {location ? (
+          <span className={CHIP_CLASS}>{location}</span>
+        ) : onResetToHome ? (
+          <button
+            type="button"
+            onClick={onResetToHome}
+            className={`${CHIP_CLASS} text-muted transition-colors hover:text-ink`}
+          >
+            {backLabel}
+          </button>
+        ) : (
+          <span aria-hidden />
+        )}
+      </div>
     </motion.header>
   );
 }
