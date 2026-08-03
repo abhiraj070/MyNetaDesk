@@ -62,3 +62,11 @@ AGENTS.md
 CLAUDE.md
 
 reddit-growth
+
+# Political Journey scraper page cache (re-fetchable; ~10MB and growing)
+data/journey/.cache/
+
+data_update
+boundaries
+.claude
+data

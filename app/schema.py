@@ -45,3 +45,9 @@ class TweetRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     reaction: str
     message: str
+
+class GetAssetsRequest(BaseModel):
+    name: str
+    designation: str
+    party: str
+    

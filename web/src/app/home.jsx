@@ -9,7 +9,7 @@ import { BottomActions } from "@/components/BottomActions";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { FeedbackSuccess } from "@/components/feedback/FeedbackSuccess";
-import { InfoSheet } from "@/components/InfoSheet";
+import { PoliticianProfileSheet } from "@/components/profile/PoliticianProfileSheet";
 import { Landing } from "@/components/Landing";
 import { LeaderboardSheet } from "@/components/LeaderboardSheet";
 import { RepresentativeCard } from "@/components/RepresentativeCard";
@@ -392,7 +392,7 @@ export function Home() {
             />
           </motion.div>
 
-          <InfoSheet
+          <PoliticianProfileSheet
             open={openSheet === "info"}
             onClose={closeSheet}
             subject={subject}

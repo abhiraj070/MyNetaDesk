@@ -304,3 +304,99 @@ export function normalizeTweets(payload) {
     };
   });
 }
+
+/**
+ * The identity payload both journey endpoints take, matching the backend's
+ * `GetAssetsRequest`. The task specifies name + designation; `party` is also
+ * declared required on that Pydantic model, so omitting it fails validation
+ * with a 422 before the handler runs — it is sent for that reason alone.
+ *
+ * `designation` mirrors the label the profile sheet already shows: a minister's
+ * rank title, a Chief Minister's designation.
+ */
+function identityPayload(subject) {
+  // `designation` is matched against `politicians.subject_type` on the backend,
+  // so it carries that column's values rather than a human-readable title —
+  // sending "Chief Minister of Maharashtra" matches nothing and returns an
+  // empty list rather than an error.
+  const designation = subject?.tier === "minister" ? "union_minister" : "cm";
+
+  return {
+    name: subject?.name ?? "",
+    designation,
+    party: subject?.party ?? "",
+  };
+}
+
+/** Rupee figures arrive as numbers or numeric strings; `null` must survive. */
+function toAmount(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+/**
+ * `POST /get-timeline` — the politician's career milestones, newest first.
+ * Returns `{ timeline: [...] }` with snake_case rows; normalised here into the
+ * shape `ProfileJourneyTab` renders.
+ *
+ * The endpoint returns no constituency, so `place` is deliberately absent —
+ * the timeline card already hides that line when it has nothing to show.
+ */
+export async function fetchTimeline(subject) {
+  const { data } = await api.post("/get-timeline", identityPayload(subject));
+  const rows = Array.isArray(data?.timeline) ? data.timeline : [];
+
+  return rows
+    .map((row) => ({
+      year: row.year ?? null,
+      startDate: row.start_date ?? null,
+      endDate: row.end_date ?? null,
+      role: row.position_title ?? null,
+      rank: row.position_rank ?? null,
+      party: row.party ?? null,
+      entryMode: row.entry_mode ?? null,
+      isCurrent: Boolean(row.is_current),
+      // The column is `sources` (plural) and holds an array of {url, label}.
+      sources: Array.isArray(row.sources) ? row.sources.filter((s) => s?.url) : [],
+      // Present only for milestones that carry an affidavit — roughly half do,
+      // so `null` here is normal and means "no declaration for this term",
+      // not a failure.
+      totalAssets: toAmount(row.total_assets),
+    }))
+    .filter((entry) => entry.role)
+    .sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+}
+
+/**
+ * `POST /get-assets` — every declared-wealth record on file, as
+ * `{ top_assets: [...] }`. The Declared Assets sheet shows one breakdown, so
+ * the most recent record wins; the rest are returned for callers that want the
+ * progression.
+ */
+export async function fetchAssets(subject) {
+  const { data } = await api.post("/get-assets", identityPayload(subject));
+  const rows = Array.isArray(data?.top_assets) ? data.top_assets : [];
+
+  return rows
+    .map((row) => ({
+      electionYear: row.election_year ?? null,
+      electionName: row.election_name ?? null,
+      sourceUrl: row.source_url ?? null,
+      totalAssets: toAmount(row.total_assets),
+      totalLiabilities: toAmount(row.total_liabilities),
+      movableAssets: toAmount(row.movable_assets),
+      immovableAssets: toAmount(row.immovable_assets),
+      cash: toAmount(row.cash),
+      bankDeposits: toAmount(row.bank_deposits),
+      sharesInvestments: toAmount(row.shares_investments),
+      mutualFunds: toAmount(row.mutual_funds),
+      jewellery: toAmount(row.jewellery),
+      vehicles: toAmount(row.vehicles),
+      residentialProperty: toAmount(row.residential_property),
+      commercialProperty: toAmount(row.commercial_property),
+      agriculturalLand: toAmount(row.agricultural_land),
+      otherAssets: toAmount(row.other_assets),
+    }))
+    .sort((a, b) => (b.electionYear ?? 0) - (a.electionYear ?? 0));
+}
