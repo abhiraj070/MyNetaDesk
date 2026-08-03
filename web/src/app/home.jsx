@@ -444,8 +444,24 @@ export function Home() {
   );
 }
 
-const CHIP_CLASS =
-  "inline-flex max-w-[60%] items-center gap-1.5 truncate rounded-full bg-surface px-3.5 py-1.5 font-display text-xs font-semibold text-ink shadow-card ring-1 ring-ink/5";
+/*
+ * Header control geometry, shared by the location pill and the feedback
+ * button so they read as one set: identical height, radius language, surface,
+ * ring and elevation. `h-9` is the single source of truth for that height —
+ * the circular button is `size-9`, which is the same number, so the two can
+ * never drift apart.
+ */
+const NAV_CONTROL =
+  "h-9 rounded-full bg-surface text-ink shadow-card ring-1 ring-ink/5";
+
+/*
+ * The bar itself: a floating glass card rather than a full-bleed strip.
+ * Translucent white over the page's own blue/pink ambient gradient, so it
+ * picks up a faint tint without introducing a gradient of its own — the
+ * politician card underneath stays the brightest, heaviest object on screen.
+ */
+const NAV_SURFACE =
+  "rounded-[26px] bg-surface/72 shadow-card ring-1 ring-white/70 backdrop-blur-xl backdrop-saturate-150";
 
 /**
  * A single-line app bar, not a masthead. The old header carried a 3xl/4xl
@@ -470,33 +486,62 @@ function ResultsHeader({
     subject.tier === "cm" && subject.isHome ? titleCase(subject.state ?? "") : null;
 
   return (
-    <motion.header
-      {...rise(0)}
-      className="flex shrink-0 items-center justify-between gap-3"
-    >
-      <p className="flex items-center gap-1.5 font-display text-base font-bold tracking-tight text-ink">
-        <span aria-hidden>👋</span>
-        MyNetaji
-      </p>
+    // The extra bottom margin sits on the header alone, so the gap to the
+    // politician card opens up without touching the rhythm of anything below it.
+    <motion.header {...rise(0)} className="shrink-0 pt-1 pb-3 sm:pb-4">
+      <div className={`flex items-center gap-3 py-2 pr-2 pl-4 ${NAV_SURFACE}`}>
+        {/* shrink-0: the wordmark never compresses, however long the state name
+            gets — it is the one fixed anchor the bar is balanced around. */}
+        <p className="shrink-0 font-display text-lg leading-none font-bold tracking-tight text-ink">
+          MyNetaji
+        </p>
 
-      <div className="flex items-center gap-2">
-        <FeedbackButton onClick={onOpenFeedback} />
+        {/* min-w-0 lets this group absorb the remaining width and, only when a
+            very long name genuinely runs out of room, allows the pill inside
+            it to ellipsise rather than push the wordmark off-screen. */}
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <FeedbackButton onClick={onOpenFeedback} />
 
-        {location ? (
-          <span className={CHIP_CLASS}>{location}</span>
-        ) : onResetToHome ? (
-          <button
-            type="button"
-            onClick={onResetToHome}
-            className={`${CHIP_CLASS} text-muted transition-colors hover:text-ink`}
-          >
-            {backLabel}
-          </button>
-        ) : (
-          <span aria-hidden />
-        )}
+          {location ? (
+            <LocationPill label={location} />
+          ) : onResetToHome ? (
+            <button
+              type="button"
+              onClick={onResetToHome}
+              className={`${NAV_CONTROL} inline-flex min-w-0 items-center gap-1 px-3.5 font-display text-xs font-semibold text-muted transition-colors hover:text-ink`}
+            >
+              <span className="truncate">{backLabel}</span>
+            </button>
+          ) : null}
+        </div>
       </div>
     </motion.header>
+  );
+}
+
+/**
+ * The state pill. Width is entirely content-driven — no fixed or percentage
+ * width — so "Goa" and "Dadra & Nagar Haveli and Daman & Diu" both sit with
+ * the same left/right padding and only the longest names ever ellipsise, and
+ * then only once the row has genuinely run out of space.
+ *
+ * `min-w` keeps a three-letter state from collapsing into a cramped nub, and
+ * `justify-center` means the label sits centred inside that minimum rather
+ * than hugging the left edge with dead space after it.
+ *
+ * No chevron: the pill displays the resolved state, it does not open a picker,
+ * and an affordance for an interaction that doesn't exist is worse than none.
+ */
+function LocationPill({ label }) {
+  return (
+    <span
+      title={label}
+      className={`${NAV_CONTROL} inline-flex min-w-[5.5rem] items-center justify-center px-3.5 font-display text-xs font-semibold`}
+    >
+      {/* min-w-0 on the label, not the pill: the pill keeps its comfortable
+          floor while the text inside is what actually gives way. */}
+      <span className="min-w-0 truncate">{label}</span>
+    </span>
   );
 }
 

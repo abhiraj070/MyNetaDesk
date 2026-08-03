@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { BottomSheet } from "@/components/BottomSheet";
@@ -10,8 +10,8 @@ import { SPRING_POP } from "@/lib/motion";
 
 /**
  * The feedback flow, wrapped in the shared `BottomSheet`. React first (slap or
- * rose), say why, optionally attach a screenshot, send. Kept tight so the whole
- * thing lands in well under 10 seconds.
+ * rose), say why, send. Kept tight so the whole thing lands in well under 10
+ * seconds.
  *
  * `onSubmitted(reaction)` fires after a successful send; the parent closes this
  * sheet and pops the celebratory modal.
@@ -42,10 +42,8 @@ const REACTIONS = [
 export function FeedbackSheet({ open, onClose, onSubmitted }) {
   const [reaction, setReaction] = useState(null);
   const [message, setMessage] = useState("");
-  const [screenshot, setScreenshot] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
-  const fileRef = useRef(null);
 
   // Reset to a clean slate whenever the sheet fully closes, so re-opening never
   // shows the last person's draft.
@@ -54,7 +52,6 @@ export function FeedbackSheet({ open, onClose, onSubmitted }) {
     const t = setTimeout(() => {
       setReaction(null);
       setMessage("");
-      setScreenshot(null);
       setSubmitting(false);
       setToast(null);
     }, 260);
@@ -63,15 +60,6 @@ export function FeedbackSheet({ open, onClose, onSubmitted }) {
 
   const active = REACTIONS.find((r) => r.value === reaction) ?? null;
   const canSend = Boolean(reaction) && message.trim().length > 0 && !submitting;
-
-  function handlePickFile(event) {
-    const file = event.target.files?.[0];
-    event.target.value = ""; // allow re-picking the same file
-    if (!file || !file.type.startsWith("image/")) return;
-    const readerObj = new FileReader();
-    readerObj.onload = () => setScreenshot(String(readerObj.result));
-    readerObj.readAsDataURL(file);
-  }
 
   async function handleSend() {
     if (!canSend) return;
@@ -134,35 +122,6 @@ export function FeedbackSheet({ open, onClose, onSubmitted }) {
           disabled={!reaction}
         />
       </label>
-
-      {/* Screenshot */}
-      <div className="mt-4">
-        {screenshot ? (
-          <div className="relative inline-flex overflow-hidden rounded-[18px] ring-1 ring-ink/10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={screenshot} alt="Attached screenshot" className="h-24 w-auto max-w-[180px] object-cover" />
-            <button
-              type="button"
-              onClick={() => setScreenshot(null)}
-              aria-label="Remove screenshot"
-              className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-ink/70 text-white backdrop-blur-sm transition-colors hover:bg-ink"
-            >
-              <X className="size-3.5" strokeWidth={2.5} />
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-full bg-surface-2 px-4 py-2.5 text-sm font-semibold text-muted ring-1 ring-ink/5 transition-colors hover:bg-brand-wash hover:text-brand-strong"
-          >
-            <ImagePlus className="size-4" strokeWidth={2} />
-            Attach screenshot
-            <span className="font-medium text-faint">(optional)</span>
-          </button>
-        )}
-        <input ref={fileRef} type="file" accept="image/*" onChange={handlePickFile} className="hidden" />
-      </div>
 
       {/* Send */}
       <motion.button
