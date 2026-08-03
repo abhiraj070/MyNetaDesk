@@ -23,6 +23,33 @@ politician= Table("politicians", metadata, autoload_with= engine)
 wealth= Table("wealth_declarations", metadata, autoload_with= engine)
 milestones= Table("political_milestones", metadata, autoload_with= engine)
 
+HINDI = "hi"
+
+
+def _localised(table, column_name, lang):
+    column = table.c[column_name]
+    if lang != HINDI:
+        return column
+    hindi = table.c.get(f"{column_name}_hindi")
+    if hindi is None:
+        return column
+    return func.coalesce(hindi, column).label(column_name)
+
+
+def cm_columns(lang, *names):
+    return tuple(_localised(cm, n, lang) for n in names)
+
+
+def minister_columns(lang, *names):
+    return tuple(_localised(minister, n, lang) for n in names)
+
+
+def milestone_columns(lang, *names):
+    return tuple(_localised(milestones, n, lang) for n in names)
+
+CM_NAME_EN = cm.c.name.label("name_en")
+MINISTER_NAME_EN = minister.c.minister_name.label("minister_name_en")
+
 @app.post("/get-location")
 def get_location(request: LocationRequest, db: Session= Depends(get_db)):
     try:
@@ -52,7 +79,13 @@ def get_location(request: LocationRequest, db: Session= Depends(get_db)):
 def get_minister(request: MinistrySearchRequest, db: Session= Depends(get_db)):
     try:
         minister_name= request.name
-        stmt= select(minister.c.ministry, minister.c.minister_name, minister.c.party, minister.c.photo_url, minister.c.slap_count, minister.c.rose_count, minister.c.manifesto_points)
+        lang= request.lang
+        stmt= select(
+            *minister_columns(lang, "ministry", "minister_name", "party"),
+            MINISTER_NAME_EN,
+            minister.c.photo_url, minister.c.slap_count, minister.c.rose_count,
+            *minister_columns(lang, "manifesto_points"),
+        )
 
         if not minister_name:
             all_ministers= db.execute(stmt.order_by(minister.c.ministry)).mappings().all()
@@ -91,9 +124,10 @@ def get_leaderboard_mp(offset:int= Query(0,ge=0,le=100), limit: int= Query(10,ge
 
 
 @app.get("/get-leaderboard-minister")
-def get_leaderboard_minister(limit:int= Query(10,ge=1,le=100), offset: int= Query(0,ge=0,le=100),db: Session= Depends(get_db)):
+def get_leaderboard_minister(limit:int= Query(10,ge=1,le=100), offset: int= Query(0,ge=0,le=100), lang: str= Query("en"), db: Session= Depends(get_db)):
     try:
-        cols= (minister.c.minister_name, minister.c.party, minister.c.ministry,
+        cols= (*minister_columns(lang, "minister_name", "party", "ministry"),
+               MINISTER_NAME_EN,
                minister.c.photo_url, minister.c.slap_count, minister.c.rose_count)
         slap_toppers= db.execute(
             select(*cols).order_by(minister.c.slap_count.desc(), minister.c.id.asc())
@@ -217,12 +251,20 @@ def get_cm_location(request: LocationRequest, db: Session= Depends(get_db)):
     try:
         latitude= request.latitude
         longitude= request.longitude
+        lang= request.lang
 
         user_point= func.ST_SetSRID(
             func.ST_Point(longitude, latitude),
             4326
         )
-        stmt= (select(cm.c.name, cm.c.state, cm.c.state_key, cm.c.party, cm.c.designation, cm.c.photo_url, cm.c.slap_count, cm.c.rose_count, cm.c.manifesto_points)
+        stmt= (select(
+                    *cm_columns(lang, "name", "state"),
+                    CM_NAME_EN,
+                    cm.c.state_key, cm.c.party,
+                    *cm_columns(lang, "designation"),
+                    cm.c.photo_url, cm.c.slap_count, cm.c.rose_count,
+                    *cm_columns(lang, "manifesto_points"),
+                )
                 .join(pc, cm.c.state_key==pc.c.state_key)
                 .where(func.ST_Contains(pc.c.geom, user_point))
         )
@@ -239,7 +281,15 @@ def get_cm_location(request: LocationRequest, db: Session= Depends(get_db)):
 def get_cm(request: GetCmRequest, db: Session= Depends(get_db)):
     try:
         state_key= request.state_key
-        stmt= select(cm.c.name, cm.c.state, cm.c.state_key, cm.c.party, cm.c.designation, cm.c.photo_url, cm.c.slap_count, cm.c.rose_count, cm.c.manifesto_points)
+        lang= request.lang
+        stmt= select(
+            *cm_columns(lang, "name", "state"),
+            CM_NAME_EN,
+            cm.c.state_key, cm.c.party,
+            *cm_columns(lang, "designation"),
+            cm.c.photo_url, cm.c.slap_count, cm.c.rose_count,
+            *cm_columns(lang, "manifesto_points"),
+        )
 
         if not state_key:
             all_cms= db.execute(stmt.order_by(cm.c.state)).mappings().all()
@@ -254,9 +304,10 @@ def get_cm(request: GetCmRequest, db: Session= Depends(get_db)):
 
 
 @app.get("/get-leaderboard-cm")
-def get_leaderboard_cm(offset:int= Query(0,ge=0,le=100), limit: int= Query(10,ge=1,le=100), db: Session= Depends(get_db)):
+def get_leaderboard_cm(offset:int= Query(0,ge=0,le=100), limit: int= Query(10,ge=1,le=100), lang: str= Query("en"), db: Session= Depends(get_db)):
     try:
-        cols= (cm.c.name, cm.c.state, cm.c.state_key, cm.c.party,
+        cols= (*cm_columns(lang, "name", "state"), CM_NAME_EN,
+               cm.c.state_key, cm.c.party,
                cm.c.photo_url, cm.c.slap_count, cm.c.rose_count)
         slap_toppers= db.execute(
             select(*cols).order_by(cm.c.slap_count.desc(), cm.c.id.asc())
@@ -306,11 +357,11 @@ def update_cm_count(request: UpdateCmRequest, db: Session= Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-def _highlight(db, cm_count, minister_count, key):
+def _highlight(db, cm_count, minister_count, key, lang="en"):
     top_cm = db.execute(
         select(
-            cm.c.name,
-            cm.c.state,
+            *cm_columns(lang, "name", "state"),
+            CM_NAME_EN,
             cm.c.state_key,
             cm.c.party,
             cm.c.photo_url,
@@ -325,9 +376,8 @@ def _highlight(db, cm_count, minister_count, key):
 
     top_minister = db.execute(
         select(
-            minister.c.minister_name,
-            minister.c.party,
-            minister.c.ministry,
+            *minister_columns(lang, "minister_name", "party", "ministry"),
+            MINISTER_NAME_EN,
             minister.c.photo_url,
             minister.c.slap_count,
             minister.c.rose_count,
@@ -352,9 +402,9 @@ def _highlight(db, cm_count, minister_count, key):
     return {key: {**dict(winner), "tier": tier}}
 
 
-def _highlight_route(db, cm_count, minister_count, key):
+def _highlight_route(db, cm_count, minister_count, key, lang="en"):
     try:
-        return _highlight(db, cm_count, minister_count, key)
+        return _highlight(db, cm_count, minister_count, key, lang)
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
@@ -365,32 +415,35 @@ def _today(column):
 
 
 @app.get("/most-slapped")
-def get_most_slapped(db: Session = Depends(get_db)):
+def get_most_slapped(lang: str = Query("en"), db: Session = Depends(get_db)):
     return _highlight_route(
         db,
         _today(cm.c.slap_count_today),
         _today(minister.c.slap_count_today),
         "most_slapped",
+        lang,
     )
 
 
 @app.get("/most-roasted")
-def get_most_roasted(db: Session = Depends(get_db)):
+def get_most_roasted(lang: str = Query("en"), db: Session = Depends(get_db)):
     return _highlight_route(
         db,
         _today(cm.c.rose_count_today),
         _today(minister.c.rose_count_today),
         "most_roasted",
+        lang,
     )
 
 
 @app.get("/most-judged")
-def get_most_judged(db: Session = Depends(get_db)):
+def get_most_judged(lang: str = Query("en"), db: Session = Depends(get_db)):
     return _highlight_route(
         db,
         _today(cm.c.slap_count_today) + _today(cm.c.rose_count_today),
         _today(minister.c.slap_count_today) + _today(minister.c.rose_count_today),
         "most_judged",
+        lang,
     )
 
 @app.post("/tweets")
@@ -497,14 +550,12 @@ def det_timeline(request: GetAssetsRequest, db: Session = Depends(get_db)):
     try:
         name= request.name
         designation= request.designation
-        stmt1= (select(milestones.c.year, milestones.c.start_date, milestones.c.end_date, milestones.c.position_title,
+        lang= request.lang
+        stmt1= (select(milestones.c.year, milestones.c.start_date, milestones.c.end_date,
+                    *milestone_columns(lang, "position_title"),
                     milestones.c.position_rank, milestones.c.party, milestones.c.entry_mode, milestones.c.is_current,
                     milestones.c.sources, wealth.c.total_assets)
                     .join(politician, politician.c.id == milestones.c.politician_id)
-                    # outerjoin, and on milestone_id: only about half the
-                    # milestones have an affidavit (appointments and party posts
-                    # never do), so an inner join silently drops them -- 5 of
-                    # Fadnavis's 10 terms would vanish from his timeline.
                     .outerjoin(wealth, wealth.c.milestone_id == milestones.c.id)
                     .where((politician.c.subject_type==designation) & (politician.c.canonical_name==name)))
         timeline= db.execute(stmt1).mappings().all()

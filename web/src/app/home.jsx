@@ -3,14 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { Menu, Newspaper } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { BottomActions } from "@/components/BottomActions";
-import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { FeedbackSuccess } from "@/components/feedback/FeedbackSuccess";
 import { PoliticianProfileSheet } from "@/components/profile/PoliticianProfileSheet";
 import { Landing } from "@/components/Landing";
+import { LanguageModal } from "@/components/LanguageModal";
+import { LiveNewsSheet } from "@/components/LiveNewsSheet";
+import { Sidebar } from "@/components/Sidebar";
 import { LeaderboardSheet } from "@/components/LeaderboardSheet";
 import { RepresentativeCard } from "@/components/RepresentativeCard";
 import { SearchSheet } from "@/components/SearchSheet";
@@ -24,13 +27,11 @@ import {
   fetchMinisterByName,
   toFriendlyError,
 } from "@/lib/api";
-import {
-  GEOLOCATION_COPY,
-  GeolocationError,
-  requestPosition,
-} from "@/lib/geolocation";
+import { GeolocationError, requestPosition } from "@/lib/geolocation";
 import { rankOf } from "@/lib/ministries";
+import { useTranslation } from "@/lib/i18n";
 import { rise, SPRING_POP } from "@/lib/motion";
+import { NAV_CONTROL, NAV_MENU_BUTTON, NAV_SURFACE } from "@/lib/navStyles";
 
 const RANK_ORDER = {
   "Prime Minister": 0,
@@ -72,6 +73,7 @@ function readDeepLink(params) {
 
 export function Home() {
   const deepLink = readDeepLink(useSearchParams());
+  const { t, language, hasChosen, isHydrated } = useTranslation();
 
   const [coords, setCoords] = useState(deepLink.coords);
   const [geoError, setGeoError] = useState(null);
@@ -102,6 +104,11 @@ export function Home() {
     deepLink.coords ? null : deepLink.cmStateKey,
   );
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [newsOpen, setNewsOpen] = useState(false);
+  // Re-opening the picker from the sidebar is dismissible; the first-run
+  // prompt is not (see LanguageModal).
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [feedbackReaction, setFeedbackReaction] = useState(null);
 
   // Pre-fetched here (not only when the Search sheet opens) so a
@@ -128,7 +135,7 @@ export function Home() {
   // Resolves a `?share=cm&state=` deep link (same fetch the leaderboard uses to
   // open a CM), then swaps that CM in the same render-time pattern as above.
   const { data: seededCm } = useQuery({
-    queryKey: ["cm-by-state", pendingCmState],
+    queryKey: ["cm-by-state", language, pendingCmState],
     queryFn: () => fetchCmByStateKey(pendingCmState),
     enabled: Boolean(pendingCmState),
   });
@@ -144,7 +151,7 @@ export function Home() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["cm-location", coords?.latitude, coords?.longitude],
+    queryKey: ["cm-location", language, coords?.latitude, coords?.longitude],
     queryFn: () => fetchCmLocation(coords),
     enabled: coords !== null,
   });
@@ -233,12 +240,12 @@ export function Home() {
         }
         setOpenSheet(null);
       } catch {
-        showToast("Couldn't load their profile. Try again?");
+        showToast(t("common.profileFailed"));
       } finally {
         setPendingTopperKey(null);
       }
     },
-    [pendingTopperKey, showToast],
+    [pendingTopperKey, showToast, t],
   );
 
   const handleBackFromLeaderboardProfile = useCallback(() => {
@@ -264,12 +271,12 @@ export function Home() {
       }
       try {
         await navigator.clipboard.writeText(`${text}\n${url}`);
-        showToast("Link copied — paste it anywhere.");
+        showToast(t("share.copied"));
       } catch {
-        showToast("Couldn't copy the link. Try again?");
+        showToast(t("share.failed"));
       }
     },
-    [subject, coords, leaderboardSubject, showToast],
+    [subject, coords, leaderboardSubject, showToast, t],
   );
 
   // The lightweight reward beat after a vote commits — separate from the
@@ -278,12 +285,10 @@ export function Home() {
     (next) => {
       setLastVote({ key: subjectKey, choice: next });
       showToast(
-        next === "slap"
-          ? "👋 Another slap recorded."
-          : "🌹 One more rose added.",
+        next === "slap" ? t("vote.slapRecorded") : t("vote.roseRecorded"),
       );
     },
-    [subjectKey, showToast],
+    [subjectKey, showToast, t],
   );
 
   // Let the sheet finish sliding out before the celebration springs in, so
@@ -315,24 +320,24 @@ export function Home() {
 
       {stage === "locating" && (
         <LocatingScreen
-          label="Locating your state"
-          detail="Matching your coordinates against state boundaries."
+          label={t("status.locatingState")}
+          detail={t("status.locatingDetail")}
         />
       )}
 
       {stage === "geo-error" && (
         <ErrorScreen
-          overline={GEOLOCATION_COPY[geoError].overline}
-          title={GEOLOCATION_COPY[geoError].title}
-          body={GEOLOCATION_COPY[geoError].body}
+          overline={t(`geo.${geoError}.overline`)}
+          title={t(`geo.${geoError}.title`)}
+          body={t(`geo.${geoError}.body`)}
           onRetry={handleAllowLocation}
         />
       )}
 
       {stage === "fetch-error" && (
         <ErrorScreen
-          overline="Lookup failed"
-          title="We couldn't reach the register"
+          overline={t("status.lookupFailedOverline")}
+          title={t("status.lookupFailedTitle")}
           body={toFriendlyError(error)}
           onRetry={refetch}
         />
@@ -340,9 +345,9 @@ export function Home() {
 
       {stage === "empty" && (
         <ErrorScreen
-          overline="No match"
-          title="No state covers this spot"
-          body="We couldn't match your location to a state we hold. Being outside India — or right on a boundary — is the usual reason."
+          overline={t("status.noMatchOverline")}
+          title={t("status.noMatchTitle")}
+          body={t("status.noMatchBody")}
           onRetry={handleAllowLocation}
         />
       )}
@@ -360,8 +365,9 @@ export function Home() {
                   ? () => setSelectedSearchResult(null)
                   : null
             }
-            backLabel={leaderboardSubject ? "← Back" : "← Back to your CM"}
-            onOpenFeedback={() => setFeedbackOpen(true)}
+            backLabel={leaderboardSubject ? t("nav.back") : t("nav.backToCm")}
+            onOpenMenu={() => setSidebarOpen(true)}
+            onOpenNews={() => setNewsOpen(true)}
           />
 
           <RepresentativeCard
@@ -391,6 +397,36 @@ export function Home() {
               shareHighlight={Boolean(lastChoice)}
             />
           </motion.div>
+
+          <Sidebar
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            onOpenLanguage={() => {
+              setSidebarOpen(false);
+              setLanguageOpen(true);
+            }}
+            onOpenFeedback={() => {
+              setSidebarOpen(false);
+              setFeedbackOpen(true);
+            }}
+          />
+          <LiveNewsSheet
+            open={newsOpen}
+            onClose={() => setNewsOpen(false)}
+            subject={subject}
+          />
+          {/*
+           * First-run language prompt: fires as soon as a representative has
+           * resolved (i.e. immediately after the location step) and only while
+           * no choice has ever been made. Not dismissible, because dismissing
+           * would leave `hasChosen` false and re-prompt on the next load.
+           */}
+          <LanguageModal open={isHydrated && !hasChosen} onClose={() => {}} />
+          <LanguageModal
+            open={languageOpen}
+            onClose={() => setLanguageOpen(false)}
+            dismissible
+          />
 
           <PoliticianProfileSheet
             open={openSheet === "info"}
@@ -444,25 +480,6 @@ export function Home() {
   );
 }
 
-/*
- * Header control geometry, shared by the location pill and the feedback
- * button so they read as one set: identical height, radius language, surface,
- * ring and elevation. `h-9` is the single source of truth for that height —
- * the circular button is `size-9`, which is the same number, so the two can
- * never drift apart.
- */
-const NAV_CONTROL =
-  "h-9 rounded-full bg-surface text-ink shadow-card ring-1 ring-ink/5";
-
-/*
- * The bar itself: a floating glass card rather than a full-bleed strip.
- * Translucent white over the page's own blue/pink ambient gradient, so it
- * picks up a faint tint without introducing a gradient of its own — the
- * politician card underneath stays the brightest, heaviest object on screen.
- */
-const NAV_SURFACE =
-  "rounded-[26px] bg-surface/72 shadow-card ring-1 ring-white/70 backdrop-blur-xl backdrop-saturate-150";
-
 /**
  * A single-line app bar, not a masthead. The old header carried a 3xl/4xl
  * headline, an ornament and a subtitle — roughly the top 40% of the first
@@ -476,9 +493,11 @@ const NAV_SURFACE =
 function ResultsHeader({
   subject,
   onResetToHome,
-  backLabel = "← Back to your CM",
-  onOpenFeedback,
+  backLabel,
+  onOpenMenu,
+  onOpenNews,
 }) {
+  const { t } = useTranslation();
   // The state chip only ever applies to the actual home CM (resolved from
   // the user's own location) — a minister, a searched-in CM, or a
   // leaderboard-navigated CM all show the back button in this slot instead.
@@ -488,8 +507,23 @@ function ResultsHeader({
   return (
     // The extra bottom margin sits on the header alone, so the gap to the
     // politician card opens up without touching the rhythm of anything below it.
-    <motion.header {...rise(0)} className="shrink-0 pt-1 pb-3 sm:pb-4">
-      <div className={`flex items-center gap-3 py-2 pr-2 pl-4 ${NAV_SURFACE}`}>
+    // The hamburger is a sibling of the bar, not a child of it: the bar gives
+    // up that much width so the button sits clear of the glass surface, which
+    // is what makes it read as a separate control rather than a nav item.
+    <motion.header
+      {...rise(0)}
+      className="flex shrink-0 items-center gap-2.5 pt-1 pb-3 sm:pb-4"
+    >
+      <button
+        type="button"
+        onClick={onOpenMenu}
+        aria-label={t("nav.menu")}
+        className={`${NAV_MENU_BUTTON} ${NAV_SURFACE}`}
+      >
+        <Menu className="size-5" strokeWidth={2.25} />
+      </button>
+
+      <div className={`flex min-w-0 flex-1 items-center gap-3 py-2 pr-2 pl-4 ${NAV_SURFACE}`}>
         {/* shrink-0: the wordmark never compresses, however long the state name
             gets — it is the one fixed anchor the bar is balanced around. */}
         <p className="shrink-0 font-display text-lg leading-none font-bold tracking-tight text-ink">
@@ -500,7 +534,7 @@ function ResultsHeader({
             very long name genuinely runs out of room, allows the pill inside
             it to ellipsise rather than push the wordmark off-screen. */}
         <div className="ml-auto flex min-w-0 items-center gap-2">
-          <FeedbackButton onClick={onOpenFeedback} />
+          <LiveNewsButton onClick={onOpenNews} />
 
           {location ? (
             <LocationPill label={location} />
@@ -510,12 +544,35 @@ function ResultsHeader({
               onClick={onResetToHome}
               className={`${NAV_CONTROL} inline-flex min-w-0 items-center gap-1 px-3.5 font-display text-xs font-semibold text-muted transition-colors hover:text-ink`}
             >
-              <span className="truncate">{backLabel}</span>
+              <span className="truncate">{backLabel ?? t("nav.backToCm")}</span>
             </button>
           ) : null}
         </div>
       </div>
     </motion.header>
+  );
+}
+
+/**
+ * Live News launcher. Same geometry as the location pill (`NAV_CONTROL`'s
+ * h-9 / size-9 pairing) so the two controls in the bar line up exactly.
+ * Replaces the feedback button that used to sit here; feedback moved into the
+ * sidebar.
+ */
+function LiveNewsButton({ onClick }) {
+  const { t } = useTranslation();
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      aria-label={t("nav.liveNews")}
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.92 }}
+      transition={SPRING_POP}
+      className={`${NAV_CONTROL} flex size-9 shrink-0 items-center justify-center text-muted transition-colors hover:text-ink`}
+    >
+      <Newspaper className="size-4" strokeWidth={2.2} />
+    </motion.button>
   );
 }
 

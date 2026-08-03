@@ -2,6 +2,8 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { fetchLeaderboard } from "@/lib/api";
 
 const PAGE_SIZE = 10;
@@ -27,8 +29,11 @@ const PAGE_SIZE = 10;
  * fetch that's about to run were somehow still in its window.
  */
 export function useLeaderboard(tier, board, enabled) {
+  // Part of the cache key: switching language must refetch, not reuse the
+  // previous language's rows.
+  const { language } = useTranslation();
   const query = useInfiniteQuery({
-    queryKey: ["leaderboard", tier, board],
+    queryKey: ["leaderboard", language, tier, board],
     queryFn: ({ pageParam }) =>
       fetchLeaderboard(tier, { limit: PAGE_SIZE, offset: pageParam }),
     initialPageParam: 0,

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 
+import { useTranslation } from "@/lib/i18n";
 import { SPRING_POP } from "@/lib/motion";
 
 /**
@@ -27,12 +28,14 @@ const SIZES = {
   lg: "gap-1.5 px-3.5 py-2 text-sm",
 };
 
+// `labelKey` rather than `label`: `Badge` resolves it, so every spread of
+// `{...BADGES.featured}` localises without each call site knowing.
 export const BADGES = {
-  hotSeat: { emoji: "🔥", label: "Today's Hot Seat", tone: "slap" },
-  hallOfFame: { emoji: "🏆", label: "Hall of Fame", tone: "sun" },
-  featured: { emoji: "⭐", label: "Featured", tone: "sun" },
-  trending: { emoji: "⚡", label: "Trending", tone: "brand" },
-  record: { emoji: "📜", label: "The Record", tone: "brand" },
+  hotSeat: { emoji: "🔥", labelKey: "badge.hotSeat", tone: "slap" },
+  hallOfFame: { emoji: "🏆", labelKey: "badge.hallOfFame", tone: "sun" },
+  featured: { emoji: "⭐", labelKey: "badge.featured", tone: "sun" },
+  trending: { emoji: "⚡", labelKey: "badge.trending", tone: "brand" },
+  record: { emoji: "📜", labelKey: "badge.record", tone: "brand" },
 };
 
 /**
@@ -44,6 +47,9 @@ export const BADGES = {
 export function Badge({
   emoji,
   label,
+  // Preferred over `label` for the shared BADGES entries; resolved here so no
+  // call site has to translate before spreading.
+  labelKey,
   children,
   tone = "neutral",
   size = "md",
@@ -51,6 +57,9 @@ export function Badge({
   shimmer = false,
   className = "",
 }) {
+  const { t } = useTranslation();
+  const text = labelKey ? t(labelKey) : label;
+
   return (
     <motion.span
       initial={{ scale: 0.7, opacity: 0, rotate: tilt ? -8 : 0 }}
@@ -66,7 +75,7 @@ export function Badge({
           {emoji}
         </span>
       )}
-      <span className="relative truncate">{children ?? label}</span>
+      <span className="relative truncate">{children ?? text}</span>
     </motion.span>
   );
 }

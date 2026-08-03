@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { fetchCms } from "@/lib/api";
 
 /**
@@ -10,8 +12,11 @@ import { fetchCms } from "@/lib/api";
  * exactly what the picker needs.
  */
 export function useChiefMinisters() {
+  // Part of the cache key: switching language must refetch, not reuse the
+  // previous language's rows.
+  const { language } = useTranslation();
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["chief-ministers"],
+    queryKey: ["chief-ministers", language],
     queryFn: fetchCms,
     staleTime: 5 * 60_000,
   });

@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import { Badge } from "../ui/Badge";
 import { atAGlanceMetrics, quickInsights } from "@/lib/profile";
+import { useTranslation } from "@/lib/i18n";
 import { SPRING_POP } from "@/lib/motion";
 
 const METRIC_ICON = {
@@ -30,15 +31,16 @@ const METRIC_ICON = {
  * other two.
  */
 export function ProfileOverviewTab({ subject, onOpenAssets }) {
-  const metrics = atAGlanceMetrics(subject);
-  const insights = quickInsights(subject);
+  const { t } = useTranslation();
+  const metrics = atAGlanceMetrics(subject, t);
+  const insights = quickInsights(subject, t);
 
   return (
     <div className="space-y-6 pb-6">
       <Hero subject={subject} />
 
       <section>
-        <h3 className="eyebrow">At a Glance</h3>
+        <h3 className="eyebrow">{t("profile.atAGlance")}</h3>
         <div className="mt-2.5 grid grid-cols-2 gap-3">
           {metrics.map((metric) => (
             <MetricCard
@@ -54,7 +56,7 @@ export function ProfileOverviewTab({ subject, onOpenAssets }) {
         <section>
           <div className="flex items-center gap-1.5">
             <Sparkles className="size-4 text-brand-strong" strokeWidth={2.25} />
-            <h3 className="eyebrow">Quick Insights</h3>
+            <h3 className="eyebrow">{t("profile.quickInsights")}</h3>
           </div>
           <ul className="mt-2.5 space-y-2">
             {insights.map((line) => (
@@ -168,9 +170,11 @@ function MetricCard({ metric, onClick }) {
 
 /** The "this is interactive" affordance the Declared Assets card needs. */
 function TapHint() {
+  const { t } = useTranslation();
+
   return (
     <span className="mt-0.5 flex items-center gap-0.5 text-[11px] font-semibold text-brand-strong">
-      Tap for details
+      {t("profile.tapForDetails")}
       <ChevronRight className="size-3" strokeWidth={2.5} />
     </span>
   );

@@ -8,6 +8,7 @@ import { VoteFlight } from "./vote/VoteFlight";
 import { VotePortrait } from "./vote/VotePortrait";
 import { VoteButtons } from "./VoteButtons";
 import { Badge, BADGES } from "./ui/Badge";
+import { useTranslation } from "@/lib/i18n";
 import { useVote } from "@/hooks/useVote";
 import { useVoteChoreography } from "@/hooks/useVoteChoreography";
 import { rise, SPRING_ENTRANCE, SPRING_POP } from "@/lib/motion";
@@ -16,8 +17,11 @@ const ROLE_LABEL = {
   // Only the home CM (resolved from the user's own location) is "yours" —
   // one tapped in from the leaderboard or search is someone else's, so it
   // falls back to the plain title rather than misrepresenting whose seat it is.
-  cm: (subject) => (subject?.isHome ? "Your CM" : "Chief Minister"),
-  minister: (subject) => subject?.rank_title || "Union Minister",
+  cm: (subject, t) =>
+    subject?.isHome ? t("card.yourCm") : t("card.chiefMinister"),
+  // `rank_title` is server data (already localised upstream when available),
+  // so it wins over the generic fallback.
+  minister: (subject, t) => subject?.rank_title || t("card.unionMinister"),
 };
 
 /**
@@ -34,6 +38,7 @@ const ROLE_LABEL = {
  * that isn't identity still lives behind the Information bottom sheet.
  */
 export function RepresentativeCard({ subject, keySeed, onFirstVote }) {
+  const { t } = useTranslation();
   const stageRef = useRef(null);
   const portraitRef = useRef(null);
   const buttonsRef = useRef({});
@@ -41,7 +46,7 @@ export function RepresentativeCard({ subject, keySeed, onFirstVote }) {
   const { choice, slaps, roses, vote, isError } = useVote(subject.tier, subject);
   const choreo = useVoteChoreography({ stageRef, portraitRef, buttonsRef });
 
-  const role = ROLE_LABEL[subject.tier]?.(subject);
+  const role = ROLE_LABEL[subject.tier]?.(subject, t);
 
   return (
     <div ref={stageRef} className="relative flex min-h-0 flex-1 flex-col gap-3">
@@ -151,7 +156,7 @@ export function RepresentativeCard({ subject, keySeed, onFirstVote }) {
       </div>
 
       <motion.section
-        aria-label="Your verdict"
+        aria-label={t("vote.yourVerdict")}
         {...rise(0.12)}
         className="mx-auto w-full max-w-md shrink-0"
       >

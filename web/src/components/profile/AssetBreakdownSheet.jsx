@@ -19,6 +19,7 @@ import {
 
 import { BottomSheet } from "../BottomSheet";
 import { useAssets } from "@/hooks/useAssets";
+import { useTranslation } from "@/lib/i18n";
 import { toFriendlyError } from "@/lib/api";
 import { ASSET_FIELD_GROUPS } from "@/lib/profile";
 
@@ -41,8 +42,8 @@ const FIELD_ICON = {
   otherAssets: MoreHorizontal,
 };
 
-function formatInr(value) {
-  if (value === null || value === undefined) return "Not available";
+function formatInr(value, notAvailable) {
+  if (value === null || value === undefined) return notAvailable;
   return `₹${Number(value).toLocaleString("en-IN")}`;
 }
 
@@ -62,6 +63,7 @@ function formatInr(value) {
  * is estimated or invented.
  */
 export function AssetBreakdownSheet({ open, onClose, subject }) {
+  const { t } = useTranslation();
   const { latest, isPending, isError, error } = useAssets({
     subject,
     enabled: open,
@@ -76,7 +78,7 @@ export function AssetBreakdownSheet({ open, onClose, subject }) {
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Declared Assets"
+      title={t("assets.title")}
       subtitle={subject.name}
     >
       {isError ? (
@@ -97,9 +99,7 @@ export function AssetBreakdownSheet({ open, onClose, subject }) {
                 strokeWidth={2}
               />
               <p className="text-xs leading-relaxed font-medium text-muted">
-                No election affidavit is on file for this profile yet — every
-                figure below will populate once that source is added. Nothing
-                here is estimated or invented.
+                {t("assets.noAffidavit")}
               </p>
             </div>
           )}
@@ -107,13 +107,13 @@ export function AssetBreakdownSheet({ open, onClose, subject }) {
           <div className={`grid grid-cols-2 gap-3 ${latest ? "" : "mt-4"}`}>
             <SummaryStat
               icon={TrendingUp}
-              label="Total Declared Assets"
+              label={t("assets.totalAssets")}
               value={data.totalAssets ?? null}
               tone="laurel"
             />
             <SummaryStat
               icon={TrendingDown}
-              label="Total Declared Liabilities"
+              label={t("assets.totalLiabilities")}
               value={data.totalLiabilities ?? null}
               tone="slap"
             />
@@ -138,13 +138,14 @@ export function AssetBreakdownSheet({ open, onClose, subject }) {
  * site in general.
  */
 function SourceNote({ record }) {
+  const { t } = useTranslation();
   const label = record.electionName
     ? `MyNeta — ${record.electionName}`
     : "MyNeta (ADR)";
 
   return (
     <p className="mt-5 text-[11px] leading-relaxed font-medium text-faint">
-      Source:{" "}
+      {t("profile.source")}{" "}
       {record.sourceUrl ? (
         <a
           href={record.sourceUrl}
@@ -157,8 +158,7 @@ function SourceNote({ record }) {
       ) : (
         label
       )}
-      , from the candidate&apos;s own election affidavit filed with the Election
-      Commission. Figures are self-declared and cover the candidate and family.
+      , {t("assets.sourceNote")}
     </p>
   );
 }
@@ -204,6 +204,7 @@ function AssetsSkeleton() {
 }
 
 function SummaryStat({ icon: Icon, label, value, tone }) {
+  const { t } = useTranslation();
   const toneClass =
     tone === "laurel"
       ? "bg-laurel-wash text-laurel-strong"
@@ -220,13 +221,14 @@ function SummaryStat({ icon: Icon, label, value, tone }) {
         {label}
       </p>
       <p className="mt-0.5 font-display text-base font-bold text-ink">
-        {formatInr(value)}
+        {formatInr(value, t("assets.notAvailable"))}
       </p>
     </div>
   );
 }
 
 function FieldGroup({ group, data }) {
+  const { t } = useTranslation();
   const GroupIcon = GROUP_ICON[group.key] ?? Wallet;
   const total = group.totalKey ? data[group.totalKey] : null;
 
@@ -236,12 +238,12 @@ function FieldGroup({ group, data }) {
         <div className="flex items-center gap-2">
           <GroupIcon className="size-4 text-muted" strokeWidth={2.25} />
           <h4 className="font-display text-sm font-bold text-ink">
-            {group.label}
+            {t(group.labelKey)}
           </h4>
         </div>
         {group.totalKey && (
           <span className="font-display text-sm font-bold text-ink">
-            {formatInr(total)}
+            {formatInr(total, t("assets.notAvailable"))}
           </span>
         )}
       </div>
@@ -255,10 +257,10 @@ function FieldGroup({ group, data }) {
                 strokeWidth={2}
               />
               <span className="min-w-0 flex-1 text-sm font-medium text-ink">
-                {field.label}
+                {t(field.labelKey)}
               </span>
               <span className="shrink-0 text-sm font-semibold text-muted">
-                {formatInr(data[field.key])}
+                {formatInr(data[field.key], t("assets.notAvailable"))}
               </span>
             </li>
           );

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import { Badge, BADGES } from "./ui/Badge";
 import { useHighlights } from "@/hooks/useHighlights";
+import { useTranslation } from "@/lib/i18n";
 import { SPRING_POP, SPRING_PRESS } from "@/lib/motion";
 
 /**
@@ -23,9 +24,9 @@ import { SPRING_POP, SPRING_PRESS } from "@/lib/motion";
  * the app admitting it couldn't ask.
  */
 const HIGHLIGHTS = [
-  { slot: "slapped", emoji: "👋", label: "Most Slapped", tone: "slap" },
-  { slot: "loved", emoji: "🌹", label: "Most Loved", tone: "laurel" },
-  { slot: "judged", emoji: "🏆", label: "Most Judged", tone: "sun" },
+  { slot: "slapped", emoji: "👋", labelKey: "highlight.mostSlapped", tone: "slap" },
+  { slot: "loved", emoji: "🌹", labelKey: "highlight.mostLoved", tone: "laurel" },
+  { slot: "judged", emoji: "🏆", labelKey: "highlight.mostJudged", tone: "sun" },
 ];
 
 // Gradient icon chips rather than flat washes — the diagonal fade to white
@@ -54,13 +55,14 @@ function displayName(row) {
 }
 
 export function TodaysHighlight({ onSelectSubject, pendingKey }) {
+  const { t } = useTranslation();
   const { slots, isPending } = useHighlights();
 
   return (
-    <section aria-label="Today's Highlight" className="shrink-0">
+    <section aria-label={t("highlight.title")} className="shrink-0">
       <div className="flex items-center gap-2">
         <h2 className="font-display text-sm font-bold text-ink">
-          Today&apos;s Highlight
+          {t("highlight.title")}
         </h2>
         <Badge {...BADGES.trending} size="sm" />
       </div>
@@ -91,7 +93,7 @@ export function TodaysHighlight({ onSelectSubject, pendingKey }) {
               </motion.span>
 
               <p className="font-display text-[11px] leading-tight font-semibold text-ink">
-                {item.label}
+                {t(item.labelKey)}
               </p>
 
               <TileValue
@@ -145,6 +147,7 @@ export function TodaysHighlight({ onSelectSubject, pendingKey }) {
  * skeleton, a name and a dash all occupy the same two lines.
  */
 function TileValue({ isPending, slot, emoji }) {
+  const { t } = useTranslation();
   if (isPending) {
     return (
       <span
@@ -160,7 +163,7 @@ function TileValue({ isPending, slot, emoji }) {
   if (slot?.failed) {
     return (
       <span className="flex min-h-8 items-center text-[11px] leading-tight font-semibold text-faint">
-        Unavailable
+        {t("highlight.unavailable")}
       </span>
     );
   }
@@ -170,7 +173,7 @@ function TileValue({ isPending, slot, emoji }) {
   if (!name) {
     return (
       <span className="flex min-h-8 items-center text-[11px] leading-tight font-medium text-faint">
-        No verdicts yet
+        {t("highlight.empty")}
       </span>
     );
   }

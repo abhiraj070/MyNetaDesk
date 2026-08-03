@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Badge } from "../ui/Badge";
 import { useTimeline } from "@/hooks/useTimeline";
 import { toFriendlyError } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import { placeOf } from "@/lib/profile";
 
 /**
@@ -19,6 +20,7 @@ import { placeOf } from "@/lib/profile";
  * conditionally — so nothing is fetched on page load.
  */
 export function ProfileJourneyTab({ subject, onOpenAssets }) {
+  const { t } = useTranslation();
   const { entries, isPending, isError, error } = useTimeline({ subject });
 
   // The Declared Assets sheet always shows the LATEST declaration, so exactly
@@ -69,9 +71,7 @@ export function ProfileJourneyTab({ subject, onOpenAssets }) {
         <div className="mt-5 flex items-start gap-3 rounded-card bg-surface-2 px-4 py-3.5 ring-1 ring-ink/5">
           <Sparkle className="mt-0.5 size-4 shrink-0 text-faint" strokeWidth={2} />
           <p className="text-xs leading-relaxed font-medium text-muted">
-            That&apos;s everything confirmed for now. Past terms, party changes
-            and affidavit-by-affidavit wealth history aren&apos;t available yet
-            — this profile will fill in as we add full election records.
+            {t("profile.journeyEmpty")}
           </p>
         </div>
       )}
@@ -85,6 +85,7 @@ export function ProfileJourneyTab({ subject, onOpenAssets }) {
  * carries a dozen source links, and the point is attribution, not a bibliography.
  */
 function SourceNote({ entries }) {
+  const { t } = useTranslation();
   const byHost = new Map();
   for (const entry of entries) {
     for (const source of entry.sources ?? []) {
@@ -96,7 +97,7 @@ function SourceNote({ entries }) {
 
   return (
     <p className="mt-5 text-[11px] leading-relaxed font-medium text-faint">
-      Source:{" "}
+      {t("profile.source")}{" "}
       {[...byHost.entries()].map(([label, url], index) => (
         <span key={label}>
           {index > 0 && " · "}
@@ -128,12 +129,13 @@ function hostLabel(url) {
 }
 
 function TimelineCard({ entry, subject, onOpenAssets }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   // The endpoint returns no constituency, so a place is only shown for the
   // current position, where the subject already carries one.
   const place = entry.isCurrent ? placeOf(subject) : null;
-  const period = formatPeriod(entry);
+  const period = formatPeriod(entry, t);
   const hasAssets = entry.totalAssets !== null;
   // `onOpenAssets` is only passed down to the newest declaration; every other
   // card renders its figure as plain text, since the sheet would otherwise
@@ -158,7 +160,7 @@ function TimelineCard({ entry, subject, onOpenAssets }) {
             className="min-w-0 flex-1 text-left"
           >
             <span className="eyebrow">
-              {entry.isCurrent ? "Current" : (entry.year ?? "")}
+              {entry.isCurrent ? t("profile.current") : (entry.year ?? "")}
             </span>
             <p className="mt-0.5 font-display text-base font-bold text-ink">
               {entry.role}
@@ -183,7 +185,9 @@ function TimelineCard({ entry, subject, onOpenAssets }) {
               <button
                 type="button"
                 onClick={onOpenAssets}
-                aria-label={`Declared assets ${formatCompactInr(entry.totalAssets)} — view breakdown`}
+                aria-label={t("profile.assetsChipAria", {
+                  amount: formatCompactInr(entry.totalAssets),
+                })}
                 className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-brand-wash px-2.5 py-1 text-xs font-bold text-brand-strong"
               >
                 {formatCompactInr(entry.totalAssets)}
@@ -200,7 +204,7 @@ function TimelineCard({ entry, subject, onOpenAssets }) {
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            aria-label={expanded ? "Collapse" : "Expand"}
+            aria-label={expanded ? t("profile.collapse") : t("profile.expand")}
             className="shrink-0 text-muted"
           >
             <motion.span
@@ -223,8 +227,7 @@ function TimelineCard({ entry, subject, onOpenAssets }) {
               className="overflow-hidden"
             >
               <div className="border-t border-rule px-4 py-3.5 text-xs leading-relaxed font-medium text-muted">
-                {period ??
-                  "Declared assets, liabilities and other affidavit financials for this milestone aren't available yet."}
+                {period ?? t("profile.noFinancials")}
               </div>
             </motion.div>
           )}
@@ -243,12 +246,15 @@ function formatCompactInr(value) {
 }
 
 /** "Mar 1997 – Feb 1999", or "Since Dec 2024" while still held. */
-function formatPeriod(entry) {
+function formatPeriod(entry, t) {
   const start = formatDate(entry.startDate);
   const end = formatDate(entry.endDate);
   if (!start && !end) return null;
-  if (start && !end) return entry.isCurrent ? `Since ${start}` : `From ${start}`;
-  if (!start && end) return `Until ${end}`;
+  if (start && !end)
+    return entry.isCurrent
+      ? `${t("profile.since")} ${start}`
+      : `${t("profile.from")} ${start}`;
+  if (!start && end) return `${t("profile.until")} ${end}`;
   return `${start} – ${end}`;
 }
 
@@ -256,6 +262,9 @@ function formatDate(value) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
+  // Pinned to en-IN in every language: digits stay Latin (1,23,456 / "Mar
+  // 1997") rather than becoming Devanagari numerals, which is what a Hindi
+  // locale would produce and is not wanted here.
   return date.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 }
 

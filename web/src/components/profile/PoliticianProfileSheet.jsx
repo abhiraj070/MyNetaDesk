@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { BottomSheet } from "../BottomSheet";
+import { useTranslation } from "@/lib/i18n";
 import { PillTabs } from "../Leaderboard";
 import { AssetBreakdownSheet } from "./AssetBreakdownSheet";
 import { ProfileOverviewTab } from "./ProfileOverviewTab";
@@ -12,10 +13,12 @@ import { ProfileManifestosTab } from "./ProfileManifestosTab";
 // No emoji here (unlike `PillTabs`'s other uses in Leaderboard.jsx): with
 // "Political Journey" already the longest label PillTabs has ever carried,
 // an icon on all three would push the row wider than a phone screen.
+// Keys, not labels — resolved per render so switching language relabels the
+// tabs without remounting the sheet.
 const TABS = [
-  { value: "overview", label: "Overview" },
-  { value: "manifestos", label: "Manifestos" },
-  { value: "journey", label: "Political Journey" },
+  { value: "overview", key: "profile.overview" },
+  { value: "manifestos", key: "profile.manifestos" },
+  { value: "journey", key: "profile.journey" },
 ];
 
 /**
@@ -37,6 +40,7 @@ const TABS = [
  * descendant and mis-position the breakdown sheet entirely.
  */
 export function PoliticianProfileSheet({ open, onClose, subject }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState("overview");
   const [assetsOpen, setAssetsOpen] = useState(false);
 
@@ -66,7 +70,12 @@ export function PoliticianProfileSheet({ open, onClose, subject }) {
     <>
       <BottomSheet open={open} onClose={onClose} title={subject.name} subtitle={role} size="tall">
         <div className="sticky top-0 z-10 -mx-6 mb-5 bg-surface px-6 pt-1 pb-3">
-          <PillTabs options={TABS} value={tab} onChange={setTab} ariaLabel="Profile section" />
+          <PillTabs
+            options={TABS.map((entry) => ({ ...entry, label: t(entry.key) }))}
+            value={tab}
+            onChange={setTab}
+            ariaLabel={t("profile.sectionAria")}
+          />
         </div>
 
         {tab === "overview" && (

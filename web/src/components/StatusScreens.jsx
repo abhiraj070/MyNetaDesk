@@ -2,9 +2,13 @@
 
 import { motion } from "framer-motion";
 
+import { Menu } from "lucide-react";
+
 import { Button } from "./ui/Button";
 import { TodaysHighlight } from "./TodaysHighlight";
 import { rise } from "@/lib/motion";
+import { useTranslation } from "@/lib/i18n";
+import { NAV_MENU_BUTTON, NAV_SURFACE } from "@/lib/navStyles";
 
 const shell = "mx-auto w-full max-w-xl px-5 py-24 sm:px-8";
 
@@ -58,13 +62,33 @@ export function LocatingScreen({ label, detail }) {
       {...rise(0)}
       className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-3 px-4 pt-2 sm:px-6 sm:pt-3"
     >
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <p className="flex items-center gap-1.5 font-display text-base font-bold tracking-tight text-ink">
-          <span aria-hidden>👋</span>
-          MyNetaji
-        </p>
-        <Skeleton className="h-7 w-28 rounded-full" />
-      </div>
+      {/*
+        * Deliberately the same shape as the real `ResultsHeader`: hamburger
+        * outside the bar, floating glass bar with the wordmark, then the two
+        * controls. Both pull from `navStyles`, so the bar cannot change shape
+        * at the moment the real screen replaces this one.
+        *
+        * The wordmark is real text, not a skeleton — it is known before any
+        * request resolves, and shimmering something we can already show reads
+        * as slower, not faster.
+        */}
+      <header className="flex shrink-0 items-center gap-2.5 pt-1 pb-3 sm:pb-4">
+        <div className={`${NAV_MENU_BUTTON} ${NAV_SURFACE}`}>
+          <Menu className="size-5 text-faint" strokeWidth={2.25} />
+        </div>
+
+        <div
+          className={`flex min-w-0 flex-1 items-center gap-3 py-2 pr-2 pl-4 ${NAV_SURFACE}`}
+        >
+          <p className="shrink-0 font-display text-lg leading-none font-bold tracking-tight text-ink">
+            MyNetaji
+          </p>
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <Skeleton className="size-9 rounded-full" />
+            <Skeleton className="h-9 w-[5.5rem] rounded-full" />
+          </div>
+        </div>
+      </header>
 
       <div className="relative flex min-h-[56dvh] flex-1 flex-col items-center justify-center gap-5 rounded-card bg-surface px-5 py-6 shadow-hero ring-1 ring-inset ring-ink/5 sm:px-8 sm:py-8">
         {/* Mirrors the real card's "Featured" sticker — absolutely
@@ -125,6 +149,8 @@ export function LocatingScreen({ label, detail }) {
 }
 
 export function ErrorScreen({ overline, title, body, onRetry }) {
+  const { t } = useTranslation();
+
   return (
     <motion.div
       {...rise(0)}
@@ -144,7 +170,7 @@ export function ErrorScreen({ overline, title, body, onRetry }) {
       </p>
 
       <Button variant="secondary" className="mt-7" onClick={onRetry}>
-        Try again
+        {t("status.tryAgain")}
       </Button>
     </motion.div>
   );

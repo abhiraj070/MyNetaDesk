@@ -6,7 +6,14 @@ export class GeolocationError extends Error {
   }
 }
 
-/** Keyed by `GeolocationError.reason`. */
+/**
+ * Keyed by `GeolocationError.reason`.
+ *
+ * Superseded for display by the `geo.*` translation keys, which use these same
+ * reason strings as their key path — the UI reads `t("geo.denied.title")`
+ * rather than this map, so the copy can be localised. Kept as the English
+ * reference (and for any non-React consumer) rather than deleted.
+ */
 export const GEOLOCATION_COPY = {
   unsupported: {
     overline: "Unsupported browser",

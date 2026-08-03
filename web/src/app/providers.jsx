@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "framer-motion";
 import { useState } from "react";
 
+import { LanguageProvider } from "@/lib/i18n";
+
 export function Providers({ children }) {
   // Created in state so the client isn't shared between requests on the server
   // and isn't torn down on every re-render.
@@ -29,7 +31,9 @@ export function Providers({ children }) {
        * only reaches CSS transitions/animations, so this is what covers the
        * springs, the idle float and the entrance stagger.
        */}
-      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+      <MotionConfig reducedMotion="user">
+        <LanguageProvider>{children}</LanguageProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

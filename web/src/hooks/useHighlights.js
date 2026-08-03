@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { fetchHighlights } from "@/lib/api";
 
 /**
@@ -16,8 +18,11 @@ import { fetchHighlights } from "@/lib/api";
  * your own votes without polling.
  */
 export function useHighlights() {
+  // Part of the cache key: switching language must refetch, not reuse the
+  // previous language's rows.
+  const { language } = useTranslation();
   const query = useQuery({
-    queryKey: ["highlights"],
+    queryKey: ["highlights", language],
     queryFn: fetchHighlights,
     staleTime: 60_000,
   });

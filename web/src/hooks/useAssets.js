@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { fetchAssets } from "@/lib/api";
 
 /**
@@ -14,8 +16,11 @@ import { fetchAssets } from "@/lib/api";
  * taps the Declared Assets card.
  */
 export function useAssets({ subject, enabled = false }) {
+  // Part of the cache key: switching language must refetch, not reuse the
+  // previous language's rows.
+  const { language } = useTranslation();
   const query = useQuery({
-    queryKey: ["assets", subject?.tier, subject?.name],
+    queryKey: ["assets", language, subject?.tier, subject?.name],
     queryFn: () => fetchAssets(subject),
     enabled: Boolean(enabled && subject?.name),
     staleTime: 5 * 60_000,

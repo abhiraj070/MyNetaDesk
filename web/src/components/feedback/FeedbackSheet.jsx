@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { BottomSheet } from "@/components/BottomSheet";
 import { sendFeedback } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import { SPRING_POP } from "@/lib/motion";
 
 /**
@@ -16,13 +17,15 @@ import { SPRING_POP } from "@/lib/motion";
  * `onSubmitted(reaction)` fires after a successful send; the parent closes this
  * sheet and pops the celebratory modal.
  */
+// Copy lives as keys so a reaction card relabels with the language; the
+// colour tokens stay literal since they are not text.
 const REACTIONS = [
   {
     value: "slap",
     emoji: "👋",
-    title: "Give us a slap",
-    subtitle: "Needs improvement",
-    placeholder: "What should we improve?",
+    titleKey: "feedback.slapTitle",
+    subtitleKey: "feedback.slapSubtitle",
+    placeholderKey: "feedback.slapPlaceholder",
     ring: "ring-slap",
     wash: "bg-slap-wash",
     text: "text-slap-strong",
@@ -30,9 +33,9 @@ const REACTIONS = [
   {
     value: "rose",
     emoji: "🌹",
-    title: "Give us a rose",
-    subtitle: "Loving it",
-    placeholder: "What did you enjoy the most?",
+    titleKey: "feedback.roseTitle",
+    subtitleKey: "feedback.roseSubtitle",
+    placeholderKey: "feedback.rosePlaceholder",
     ring: "ring-laurel",
     wash: "bg-laurel-wash",
     text: "text-laurel-strong",
@@ -40,6 +43,7 @@ const REACTIONS = [
 ];
 
 export function FeedbackSheet({ open, onClose, onSubmitted }) {
+  const { t } = useTranslation();
   const [reaction, setReaction] = useState(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -73,13 +77,18 @@ export function FeedbackSheet({ open, onClose, onSubmitted }) {
     } catch {
       // Keep the sheet open and the draft intact; just surface a toast.
       setSubmitting(false);
-      setToast("Couldn't send your feedback. Please try again.");
+      setToast(t("feedback.failed"));
       setTimeout(() => setToast(null), 3400);
     }
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="How are WE doing?" subtitle="Two taps and a sentence — that's it.">
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={t("feedback.title")}
+      subtitle={t("feedback.subtitle")}
+    >
       {/* Reaction cards */}
       <div className="grid grid-cols-2 gap-3">
         {REACTIONS.map((r) => {
@@ -104,9 +113,9 @@ export function FeedbackSheet({ open, onClose, onSubmitted }) {
                 {r.emoji}
               </span>
               <span className={`mt-1 font-display text-base font-bold ${selected ? r.text : "text-ink"}`}>
-                {r.title}
+                {t(r.titleKey)}
               </span>
-              <span className="text-xs font-semibold text-muted">{r.subtitle}</span>
+              <span className="text-xs font-semibold text-muted">{t(r.subtitleKey)}</span>
             </motion.button>
           );
         })}
@@ -114,11 +123,13 @@ export function FeedbackSheet({ open, onClose, onSubmitted }) {
 
       {/* Tell us why */}
       <label className="mt-6 block">
-        <span className="eyebrow">Tell us why</span>
+        <span className="eyebrow">{t("feedback.tellUsWhy")}</span>
         <AutoTextarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={active ? active.placeholder : "Pick a reaction first, then tell us more…"}
+          placeholder={
+            active ? t(active.placeholderKey) : t("feedback.pickFirst")
+          }
           disabled={!reaction}
         />
       </label>
@@ -136,10 +147,10 @@ export function FeedbackSheet({ open, onClose, onSubmitted }) {
         {submitting ? (
           <>
             <Loader2 className="size-5 animate-spin" />
-            Sending…
+            {t("feedback.sending")}
           </>
         ) : (
-          <>Send 🚀</>
+          <>{t("feedback.send")}</>
         )}
       </motion.button>
 

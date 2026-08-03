@@ -8,6 +8,7 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { SPRING_POP } from "@/lib/motion";
 import { leaderboardShareUrl } from "@/lib/share";
 import { toFriendlyError } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 
 import { ShareButton } from "./ShareButton";
 
@@ -47,6 +48,7 @@ export function Leaderboard({
   pendingKey,
   showToast,
 }) {
+  const { t } = useTranslation();
   const [tier, setTier] = useState(defaultTier);
   const [board, setBoard] = useState("slap");
 
@@ -56,9 +58,9 @@ export function Leaderboard({
       <div className="mb-3 flex justify-end">
         <ShareButton
           url={leaderboardShareUrl(tier)}
-          title="MyNetaji Leaderboard"
-          text="Who's getting slapped and rosed across India? See the leaderboard 👀"
-          label="Share"
+          title={t("leaderboard.shareTitle")}
+          text={t("leaderboard.shareText")}
+          label={t("nav.share")}
           variant="soft"
           showToast={showToast}
         />

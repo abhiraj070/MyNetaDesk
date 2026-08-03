@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 
 import { SPRING_POP } from "@/lib/motion";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * The feedback launcher, sitting in the header immediately left of the
@@ -15,11 +16,12 @@ import { SPRING_POP } from "@/lib/motion";
  * height, so the two line up exactly however the row reflows.
  */
 export function FeedbackButton({ onClick }) {
+  const { t } = useTranslation();
   return (
     <motion.button
       type="button"
       onClick={onClick}
-      aria-label="Send feedback"
+      aria-label={t("nav.feedback")}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.92 }}
       transition={SPRING_POP}

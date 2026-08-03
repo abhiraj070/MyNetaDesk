@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 
 import { Badge } from "./ui/Badge";
+import { useTranslation } from "@/lib/i18n";
 import { Button } from "./ui/Button";
 import { SPRING_ENTRANCE, SPRING_POP } from "@/lib/motion";
 
@@ -16,14 +17,17 @@ const item = {
   show: { opacity: 1, y: 0, transition: SPRING_ENTRANCE },
 };
 
+// Keyed, not literal: the emoji is presentation, the key resolves per language.
 const PROMISES = [
-  { emoji: "🪪", text: "Name, party, and their office" },
-  { emoji: "📜", text: "Their record, in plain terms" },
-  { emoji: "🤞", text: "Party commitments, where we have them" },
-  { emoji: "⚖️", text: "A slap or a rose — one side each" },
+  { emoji: "🪪", key: "landing.promiseIdentity" },
+  { emoji: "📜", key: "landing.promiseRecord" },
+  { emoji: "🤞", key: "landing.promiseCommitments" },
+  { emoji: "⚖️", key: "landing.promiseVerdict" },
 ];
 
 export function Landing({ onAllowLocation, isBusy }) {
+  const { t } = useTranslation();
+
   return (
     <motion.div
       variants={container}
@@ -33,17 +37,17 @@ export function Landing({ onAllowLocation, isBusy }) {
     >
       <div>
         <motion.div variants={item}>
-          <Badge emoji="⚡" label="Verdicts · India" tone="brand" size="sm" tilt />
+          <Badge emoji="⚡" label={t("landing.eyebrow")} tone="brand" size="sm" tilt />
         </motion.div>
 
         <motion.h1
           variants={item}
           className="mt-4 font-display text-5xl leading-[0.98] font-bold text-balance sm:text-6xl lg:text-7xl"
         >
-          Slap or Rose?
+          {t("landing.titleLead")}
           <br />
           <span className="bg-linear-to-r from-slap via-slap to-brand bg-clip-text text-transparent">
-            You decide.
+            {t("landing.titleEmphasis")}
           </span>
         </motion.h1>
 
@@ -51,7 +55,7 @@ export function Landing({ onAllowLocation, isBusy }) {
           variants={item}
           className="mt-5 max-w-md text-lg leading-relaxed font-medium text-muted text-pretty"
         >
-          Read what they promised. Then decide if they deserve a 👋 or 🌹.
+          {t("landing.body")}
         </motion.p>
 
         <motion.div
@@ -59,11 +63,11 @@ export function Landing({ onAllowLocation, isBusy }) {
           className="mt-8 flex flex-wrap items-center gap-4"
         >
           <Button onClick={onAllowLocation} disabled={isBusy}>
-            {isBusy ? "Finding you…" : "Who's mine? →"}
+            {isBusy ? t("landing.finding") : t("landing.cta")}
           </Button>
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-faint">
             <span aria-hidden>🔒</span>
-            Read once. Never stored.
+            {t("landing.privacy")}
           </span>
         </motion.div>
       </div>
@@ -74,15 +78,15 @@ export function Landing({ onAllowLocation, isBusy }) {
       >
         <div className="flex items-center gap-2">
           <p className="font-display text-sm font-bold text-ink">
-            What you&apos;ll see
+            {t("landing.whatYouSee")}
           </p>
-          <Badge emoji="✨" label="Free" tone="brand" size="sm" />
+          <Badge emoji="✨" label={t("landing.free")} tone="brand" size="sm" />
         </div>
 
         <ul className="mt-3 space-y-2">
           {PROMISES.map((promise) => (
             <motion.li
-              key={promise.text}
+              key={promise.key}
               whileHover={{ x: 4 }}
               transition={SPRING_POP}
               className="flex items-center gap-3 rounded-control bg-surface-2 px-3.5 py-3 text-sm font-semibold text-ink ring-1 ring-inset ring-ink/5"
@@ -93,7 +97,7 @@ export function Landing({ onAllowLocation, isBusy }) {
               >
                 {promise.emoji}
               </span>
-              {promise.text}
+              {t(promise.key)}
             </motion.li>
           ))}
         </ul>

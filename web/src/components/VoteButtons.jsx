@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 
 import { SPRING_POP, SPRING_PRESS } from "@/lib/motion";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * The two verdict controls — the loudest thing on the page after the
@@ -57,6 +58,7 @@ export function VoteButtons({
   isError,
   buttonsRef,
 }) {
+  const { t } = useTranslation();
   const counts = { slap: slapCount, rose: roseCount };
 
   return (
@@ -81,9 +83,9 @@ export function VoteButtons({
         aria-live="polite"
       >
         {isError ? (
-          <span className="text-slap-strong">That didn&apos;t save. Try again.</span>
+          <span className="text-slap-strong">{t("vote.saveFailed")}</span>
         ) : slapCount === 0 && roseCount === 0 && !choice ? (
-          <span className="text-muted">No verdicts yet — be the first.</span>
+          <span className="text-muted">{t("vote.noVerdicts")}</span>
         ) : null}
       </p>
     </div>

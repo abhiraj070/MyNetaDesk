@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+
+import { useTranslation } from "@/lib/i18n";
 import { useMemo } from "react";
 
 import { fetchMinisters } from "@/lib/api";
@@ -14,8 +16,11 @@ import { buildMinistryEntries } from "@/lib/ministries";
  * still fetched exactly once.
  */
 export function useMinistries() {
+  // Part of the cache key: switching language must refetch, not reuse the
+  // previous language's rows.
+  const { language } = useTranslation();
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["ministers"],
+    queryKey: ["ministers", language],
     queryFn: fetchMinisters,
     staleTime: 5 * 60_000,
   });

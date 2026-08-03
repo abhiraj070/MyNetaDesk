@@ -23,8 +23,8 @@ export function placeOf(subject) {
   return subject.state ? titleCase(subject.state) : null;
 }
 
-export function placeLabelOf(subject) {
-  return subject?.tier === "minister" ? "Portfolio" : "State";
+export function placeLabelKeyOf(subject) {
+  return subject?.tier === "minister" ? "profile.portfolio" : "profile.state";
 }
 
 /**
@@ -35,24 +35,32 @@ export function placeLabelOf(subject) {
  * always tappable: it opens the full breakdown sheet, which is honest about
  * there being no affidavit on file rather than hiding the interaction.
  */
-export function atAGlanceMetrics(subject) {
+export function atAGlanceMetrics(subject, t) {
   if (!subject) return [];
   const place = placeOf(subject);
 
   return [
-    { key: "party", label: "Current Party", value: subject.party || "Not on record" },
-    { key: "place", label: placeLabelOf(subject), value: place || "Not on record" },
+    {
+      key: "party",
+      label: t("profile.currentParty"),
+      value: subject.party || t("profile.notOnRecord"),
+    },
+    {
+      key: "place",
+      label: t(placeLabelKeyOf(subject)),
+      value: place || t("profile.notOnRecord"),
+    },
     {
       key: "verdict",
-      label: "Public Verdict",
+      label: t("profile.publicVerdict"),
       value: `${Number(subject.slap_count ?? 0).toLocaleString("en-IN")} 👋 · ${Number(subject.rose_count ?? 0).toLocaleString("en-IN")} 🌹`,
       slap: Number(subject.slap_count ?? 0),
       rose: Number(subject.rose_count ?? 0),
     },
     {
       key: "assets",
-      label: "Declared Assets",
-      value: "Tap to view breakdown",
+      label: t("profile.declaredAssets"),
+      value: t("profile.tapToView"),
       tappable: true,
     },
   ];
@@ -69,31 +77,31 @@ export function atAGlanceMetrics(subject) {
 export const ASSET_FIELD_GROUPS = [
   {
     key: "movable",
-    label: "Movable Assets",
+    labelKey: "assets.movable",
     totalKey: "movableAssets",
     fields: [
-      { key: "cash", label: "Cash in Hand" },
-      { key: "bankDeposits", label: "Bank Deposits" },
-      { key: "sharesInvestments", label: "Shares / Investments" },
-      { key: "mutualFunds", label: "Mutual Funds" },
-      { key: "jewellery", label: "Jewellery" },
-      { key: "vehicles", label: "Vehicles" },
+      { key: "cash", labelKey: "assets.cash" },
+      { key: "bankDeposits", labelKey: "assets.bankDeposits" },
+      { key: "sharesInvestments", labelKey: "assets.sharesInvestments" },
+      { key: "mutualFunds", labelKey: "assets.mutualFunds" },
+      { key: "jewellery", labelKey: "assets.jewellery" },
+      { key: "vehicles", labelKey: "assets.vehicles" },
     ],
   },
   {
     key: "immovable",
-    label: "Immovable Assets",
+    labelKey: "assets.immovable",
     totalKey: "immovableAssets",
     fields: [
-      { key: "residentialProperty", label: "Residential Property" },
-      { key: "commercialProperty", label: "Commercial Property" },
-      { key: "agriculturalLand", label: "Agricultural Land" },
+      { key: "residentialProperty", labelKey: "assets.residentialProperty" },
+      { key: "commercialProperty", labelKey: "assets.commercialProperty" },
+      { key: "agriculturalLand", labelKey: "assets.agriculturalLand" },
     ],
   },
   {
     key: "other",
-    label: "Other",
-    fields: [{ key: "otherAssets", label: "Other Declared Assets" }],
+    labelKey: "assets.other",
+    fields: [{ key: "otherAssets", labelKey: "assets.otherAssets" }],
   },
 ];
 
@@ -130,7 +138,7 @@ export function assetBreakdown(_subject) {
  * require history we don't have (term count, party-switch history, wealth
  * growth) is simply never generated.
  */
-export function quickInsights(subject) {
+export function quickInsights(subject, t) {
   if (!subject) return [];
   const insights = [];
   const slaps = Number(subject.slap_count ?? 0);
@@ -138,26 +146,31 @@ export function quickInsights(subject) {
 
   if (slaps > 0 || roses > 0) {
     if (roses > slaps) {
-      insights.push("Getting more 🌹 roses than 👋 slaps from voters right now.");
+      insights.push(t("profile.insightMoreRoses"));
     } else if (slaps > roses) {
-      insights.push("Getting more 👋 slaps than 🌹 roses from voters right now.");
+      insights.push(t("profile.insightMoreSlaps"));
     } else {
-      insights.push("Slaps and roses are running dead even right now.");
+      insights.push(t("profile.insightEven"));
     }
   }
 
   const points = manifestoPoints(subject);
   if (points.length > 0) {
     insights.push(
-      `${subject.party || "Their party"} has ${points.length} manifesto commitment${points.length === 1 ? "" : "s"} on record.`,
+      t(
+        points.length === 1
+          ? "profile.insightManifestoOne"
+          : "profile.insightManifesto",
+        { party: subject.party || t("profile.theirParty"), count: points.length },
+      ),
     );
   }
 
   const place = placeOf(subject);
   if (place && subject.tier === "cm") {
-    insights.push(`Currently the Chief Minister of ${place}.`);
+    insights.push(t("profile.insightCm", { place }));
   } else if (place && subject.tier === "minister") {
-    insights.push(`Currently holds the ${place} portfolio.`);
+    insights.push(t("profile.insightMinister", { place }));
   }
 
   return insights.slice(0, 3);
@@ -182,6 +195,6 @@ export function currentJourneyEntry(subject) {
         : subject.designation || "Chief Minister",
     party: subject.party || null,
     place: placeOf(subject),
-    placeLabel: placeLabelOf(subject),
+    placeLabelKey: placeLabelKeyOf(subject),
   };
 }

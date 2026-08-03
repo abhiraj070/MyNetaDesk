@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 import { SPRING_ENTRANCE, SPRING_POP, SPRING_SHEET } from "@/lib/motion";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * A modal that slides up from the bottom of the viewport.
@@ -22,6 +23,7 @@ export function BottomSheet({
   autoFocus = false,
 }) {
   const contentRef = useRef(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!open) return;
@@ -112,7 +114,7 @@ export function BottomSheet({
                 <motion.button
                   type="button"
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label={t("common.close")}
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.92 }}
                   transition={SPRING_POP}

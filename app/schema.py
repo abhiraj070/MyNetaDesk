@@ -6,10 +6,14 @@ from pydantic import BaseModel
 class LocationRequest(BaseModel):
     latitude: float
     longitude: float
+    # Optional with an English default, so a client that sends nothing keeps
+    # the exact behaviour it had before localisation existed.
+    lang: str = "en"
 
 
 class MinistrySearchRequest(BaseModel):
     name: Optional[str] = None
+    lang: str = "en"
 
 class UpdateMemberRequest(BaseModel):
     table_to_update: str
@@ -25,6 +29,7 @@ class UpdateMinistryRequest(BaseModel):
 class GetMinisterRequest(BaseModel):
     name: str
     ministry: str
+    lang: str = "en"
 
 class GetMpRequest(BaseModel):
     name: str
@@ -32,6 +37,7 @@ class GetMpRequest(BaseModel):
 
 class GetCmRequest(BaseModel):
     state_key: Optional[str] = None
+    lang: str = "en"
 
 class UpdateCmRequest(BaseModel):
     name_field_to_update: str
@@ -50,4 +56,7 @@ class GetAssetsRequest(BaseModel):
     name: str
     designation: str
     party: str
+    # Assets are numeric, so /get-assets ignores this — but the client attaches
+    # `lang` to every request, and the field has to exist for it to validate.
+    lang: str = "en"
     

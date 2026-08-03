@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { fetchTimeline } from "@/lib/api";
 
 /**
@@ -13,8 +15,11 @@ import { fetchTimeline } from "@/lib/api";
  * than showing the previous one's history.
  */
 export function useTimeline({ subject, enabled = true }) {
+  // Part of the cache key: switching language must refetch, not reuse the
+  // previous language's rows.
+  const { language } = useTranslation();
   const query = useQuery({
-    queryKey: ["timeline", subject?.tier, subject?.name],
+    queryKey: ["timeline", language, subject?.tier, subject?.name],
     queryFn: () => fetchTimeline(subject),
     enabled: Boolean(enabled && subject?.name),
     staleTime: 5 * 60_000,

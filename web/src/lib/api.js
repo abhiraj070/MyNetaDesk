@@ -6,6 +6,43 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+const LANGUAGE_STORAGE_KEY = "mynetaji:language";
+
+/**
+ * Reads the active language straight from storage rather than importing it
+ * from the React context: this runs inside an axios interceptor, outside the
+ * component tree, and storage is the same source of truth the context reads.
+ * That avoids a second copy of the value that could drift out of sync.
+ */
+function activeLanguage() {
+  if (typeof window === "undefined") return "en";
+  try {
+    return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || "en";
+  } catch {
+    return "en";
+  }
+}
+
+/**
+ * Attaches the active language to every request in one place, rather than
+ * threading a `lang` argument through all eleven call sites.
+ *
+ * The backend takes `lang` as a query param on GET and a body field on POST,
+ * and defaults to English when absent — so this is additive and an endpoint
+ * that ignores it is unaffected.
+ */
+api.interceptors.request.use((config) => {
+  const lang = activeLanguage();
+  const method = (config.method ?? "get").toLowerCase();
+
+  if (method === "get") {
+    config.params = { ...(config.params ?? {}), lang };
+  } else if (config.data && typeof config.data === "object") {
+    config.data = { ...config.data, lang };
+  }
+  return config;
+});
+
 /**
  * Turns an axios failure into a sentence we're willing to show a user.
  * The FastAPI handlers wrap everything into `{ detail: "..." }`, so we prefer
@@ -322,7 +359,12 @@ function identityPayload(subject) {
   const designation = subject?.tier === "minister" ? "union_minister" : "cm";
 
   return {
-    name: subject?.name ?? "",
+    // The ENGLISH name, never the displayed one. `politicians.canonical_name`
+    // is English, so sending the Hindi label a Hindi user sees would match no
+    // row and silently return an empty timeline / asset sheet. Endpoints carry
+    // `name_en` / `minister_name_en` for exactly this.
+    name:
+      subject?.name_en ?? subject?.minister_name_en ?? subject?.name ?? "",
     designation,
     party: subject?.party ?? "",
   };
