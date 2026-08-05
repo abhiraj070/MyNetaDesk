@@ -56,7 +56,5 @@ class GetAssetsRequest(BaseModel):
     name: str
     designation: str
     party: str
-    # Assets are numeric, so /get-assets ignores this — but the client attaches
-    # `lang` to every request, and the field has to exist for it to validate.
     lang: str = "en"
     

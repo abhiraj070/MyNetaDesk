@@ -210,6 +210,19 @@
     "roseLine1": "Your feedback helps improve MyNetaji.",
     "doneLine3": "We'll probably fix it before the politicians fix the roads. 😄"
   },
+  "brief": {
+    "title": "Political Brief",
+    "subtitle": "Today's top political story, from trusted newsrooms.",
+    "footnote": "Updated each morning · verified newsrooms",
+    "continueReading": "Continue Reading",
+    "readOriginal": "Read Original Article",
+    "empty": "No political stories available.",
+    "emptyBody": "Today's story is being put together. Do check back shortly.",
+    "failed": "Couldn't load today's briefing.",
+    "failedBody": "Something went wrong on the way here. Give it another go.",
+    "retry": "Retry",
+    "loading": "Loading today's briefing"
+  },
   "news": {
     "title": "Live News",
     "subtitle": "The latest on this representative.",

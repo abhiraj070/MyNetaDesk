@@ -41,6 +41,32 @@
 
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fredoka), ui-rounded, system-ui, sans-serif;
+  /* Card copy on the Political Brief, and nowhere else. */
+  --font-editorial: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * A second, colder neutral ramp that exists only inside the Political
+   * Brief's article card. The app's `ink`/`muted`/`faint` carry a violet cast
+   * that suits the verdict surfaces and makes a news story look tinted; these
+   * sit closer to true grey so the headline reads as printed. Kept as their
+   * own `brief-*` scale rather than as overrides, so nothing else moves.
+   */
+  --color-brief-ink: #14141c;
+  --color-brief-body: #5a5a68;
+  --color-brief-source: #5c5c6a;
+  --color-brief-meta: #6e6e7c;
+  --color-brief-faint: #8e8e9b;
+  --color-brief-line: #e9e9ef;
+  --color-brief-rule: #ededf2;
+  --color-brief-chip: #f4f4f7;
+  --color-brief-page: #f6f6f9;
+  --color-brief-placeholder: #f1f1f5;
+
+  /* Flatter than `--shadow-card`: a broadsheet lying on a table, not a tile
+     floating over one. */
+  --shadow-brief:
+    0 1px 2px rgb(20 20 28 / 0.04),
+    0 12px 28px -16px rgb(20 20 28 / 0.16);
 
   --radius-card: 30px;
   --radius-control: 18px;

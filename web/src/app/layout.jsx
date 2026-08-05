@@ -1,4 +1,4 @@
-import { Fredoka, Nunito } from "next/font/google";
+import { Fredoka, Inter, Nunito } from "next/font/google";
 
 import { AmbientSparkles } from "@/components/AmbientSparkles";
 import { Providers } from "./providers";
@@ -19,6 +19,18 @@ const fredoka = Fredoka({
 
 const nunito = Nunito({
   variable: "--font-nunito",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/**
+ * The editorial face, used only inside the Political Brief's article card.
+ * The rounded pair above carry the app's own voice; a news story set in them
+ * reads as a game about politics rather than as reporting, so the card borrows
+ * a neutral grotesque and leaves the chrome around it untouched.
+ */
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
@@ -59,7 +71,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${fredoka.variable} ${nunito.variable} h-full`}
+      className={`${fredoka.variable} ${nunito.variable} ${inter.variable} h-full`}
     >
       <body className="min-h-full">
         <AmbientSparkles />

@@ -1,3 +1,5 @@
+from urllib import request, response
+
 from app.main import app
 from app.schema import (LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest,
                         GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest, TweetRequest,
@@ -8,8 +10,10 @@ from fastapi import Depends, HTTPException, Query
 from sqlalchemy import MetaData, Table, select, func, update
 from sqlalchemy.exc import SQLAlchemyError
 import httpx
+import json
 from app.config.settings import get_settings
-from app.model.feedback import Feedback
+from app.core.redis import redis_client
+from app.db.model.feedback import Feedback
 
 _settings= get_settings()
 
@@ -564,3 +568,14 @@ def det_timeline(request: GetAssetsRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+@app.get("/get-news")
+async def get_news(lang: str = "en"):
+    try:
+        key= "hindi_news" if lang == HINDI else "english_news"
+        res= await redis_client.get(key)
+        return {"news": json.loads(res) if res else []}
+    except json.JSONDecodeError:
+        return {"news": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

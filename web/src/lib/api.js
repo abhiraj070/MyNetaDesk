@@ -442,3 +442,73 @@ export async function fetchAssets(subject) {
     }))
     .sort((a, b) => (b.electionYear ?? 0) - (a.electionYear ?? 0));
 }
+
+/**
+ * `GET /get-news?lang=…` — the day's political stories, as cached by the
+ * six-hourly scheduler. `lang` rides along on the axios interceptor.
+ *
+ * The endpoint hands back whatever sits in Redis, so this tolerates both an
+ * already-decoded array and a JSON string that was never parsed, and maps the
+ * provider's field names onto the four things the brief actually renders.
+ * Anything without a headline is dropped rather than shown as an empty card.
+ */
+export async function fetchNews() {
+  const { data } = await api.get("/get-news");
+
+  const raw = Array.isArray(data) ? data : data?.news;
+  let items = raw;
+  if (typeof raw === "string") {
+    try {
+      items = JSON.parse(raw);
+    } catch {
+      items = [];
+    }
+  }
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .map((article, index) => {
+      const description = clean(article?.description);
+      const content = clean(article?.content);
+      return {
+        id: article?.article_id ?? article?.link ?? `story-${index}`,
+        title: clean(article?.title),
+        // The preview is deliberately the short field; the detail sheet
+        // prefers the longer one and falls back to the same text.
+        preview: description || content,
+        summary: content || description,
+        source: clean(article?.source_name) || clean(article?.source_id),
+        sourceIcon: url(article?.source_icon),
+        image: url(article?.image_url),
+        // Kept as the raw string: the card formats it against the reader's
+        // language, which this layer knows nothing about.
+        publishedAt: clean(article?.pubDate) || null,
+        category: firstLabel(article?.category),
+        country: firstLabel(article?.country),
+        url: url(article?.link),
+      };
+    })
+    .filter((story) => story.title);
+}
+
+/** Trims a possibly-absent string down to something safe to render. */
+function clean(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** A URL we're willing to hand to `src`/`href`, or null. */
+function url(value) {
+  const trimmed = clean(value);
+  return /^https?:\/\//i.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * `["politics", "top"]` -> `"Politics"`. The provider sends these lowercased
+ * and the card shows exactly one, so the first entry is title-cased here
+ * rather than being restyled with `capitalize` at three call sites.
+ */
+function firstLabel(value) {
+  const first = Array.isArray(value) ? clean(value[0]) : clean(value);
+  if (!first) return null;
+  return first.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}

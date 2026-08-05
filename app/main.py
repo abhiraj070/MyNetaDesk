@@ -5,19 +5,22 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.settings import get_settings
 from app.tasks import daily_reset
-
+from app.core.schedular import scheduler
+from app.core.redis import redis_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.db.connect import engine
-    from app.model.feedback import Feedback
+    from app.db.model.feedback import Feedback
 
     Feedback.__table__.create(bind=engine, checkfirst=True)
-
+    scheduler.start()
     daily_reset.start(app)
     try:
         yield
     finally:
+        scheduler.shutdown()
+        await redis_client.aclose()
         await daily_reset.stop(app)
 
 
@@ -37,6 +40,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 from app.api import user
 

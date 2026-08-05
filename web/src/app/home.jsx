@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, Newspaper } from "lucide-react";
@@ -12,7 +13,6 @@ import { FeedbackSuccess } from "@/components/feedback/FeedbackSuccess";
 import { PoliticianProfileSheet } from "@/components/profile/PoliticianProfileSheet";
 import { Landing } from "@/components/Landing";
 import { LanguageModal } from "@/components/LanguageModal";
-import { LiveNewsSheet } from "@/components/LiveNewsSheet";
 import { Sidebar } from "@/components/Sidebar";
 import { LeaderboardSheet } from "@/components/LeaderboardSheet";
 import { RepresentativeCard } from "@/components/RepresentativeCard";
@@ -105,7 +105,6 @@ export function Home() {
   );
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [newsOpen, setNewsOpen] = useState(false);
   // Re-opening the picker from the sidebar is dismissible; the first-run
   // prompt is not (see LanguageModal).
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -367,7 +366,6 @@ export function Home() {
             }
             backLabel={leaderboardSubject ? t("nav.back") : t("nav.backToCm")}
             onOpenMenu={() => setSidebarOpen(true)}
-            onOpenNews={() => setNewsOpen(true)}
           />
 
           <RepresentativeCard
@@ -409,11 +407,6 @@ export function Home() {
               setSidebarOpen(false);
               setFeedbackOpen(true);
             }}
-          />
-          <LiveNewsSheet
-            open={newsOpen}
-            onClose={() => setNewsOpen(false)}
-            subject={subject}
           />
           {/*
            * First-run language prompt: fires as soon as a representative has
@@ -495,7 +488,6 @@ function ResultsHeader({
   onResetToHome,
   backLabel,
   onOpenMenu,
-  onOpenNews,
 }) {
   const { t } = useTranslation();
   // The state chip only ever applies to the actual home CM (resolved from
@@ -534,7 +526,7 @@ function ResultsHeader({
             very long name genuinely runs out of room, allows the pill inside
             it to ellipsise rather than push the wordmark off-screen. */}
         <div className="ml-auto flex min-w-0 items-center gap-2">
-          <LiveNewsButton onClick={onOpenNews} />
+          <BriefLink />
 
           {location ? (
             <LocationPill label={location} />
@@ -554,25 +546,24 @@ function ResultsHeader({
 }
 
 /**
- * Live News launcher. Same geometry as the location pill (`NAV_CONTROL`'s
+ * Political Brief launcher. Same geometry as the location pill (`NAV_CONTROL`'s
  * h-9 / size-9 pairing) so the two controls in the bar line up exactly.
- * Replaces the feedback button that used to sit here; feedback moved into the
- * sidebar.
+ *
+ * A real link rather than a button that pushes: `/brief` is a page of its own,
+ * so it should be openable in a new tab and prefetched like any other route.
+ * The lift on hover is CSS here for the same reason — a `motion.a` would buy
+ * nothing that a transform transition doesn't already give.
  */
-function LiveNewsButton({ onClick }) {
+function BriefLink() {
   const { t } = useTranslation();
   return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      aria-label={t("nav.liveNews")}
-      whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.92 }}
-      transition={SPRING_POP}
-      className={`${NAV_CONTROL} flex size-9 shrink-0 items-center justify-center text-muted transition-colors hover:text-ink`}
+    <Link
+      href="/brief"
+      aria-label={t("brief.title")}
+      className={`${NAV_CONTROL} flex size-9 shrink-0 items-center justify-center text-muted transition-[color,transform] duration-200 hover:-translate-y-px hover:text-ink active:scale-95`}
     >
       <Newspaper className="size-4" strokeWidth={2.2} />
-    </motion.button>
+    </Link>
   );
 }
 
