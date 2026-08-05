@@ -579,3 +579,12 @@ async def get_news(lang: str = "en"):
         return {"news": []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.get("/redis-test")
+async def redis_test():
+    await redis_client.set("test", "Hello Redis")
+    value = await redis_client.get("test")
+    return {
+        "connected": True,
+        "value": value
+    }

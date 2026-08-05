@@ -8,7 +8,7 @@ class settings(BaseSettings):
     BEARER_TOKEN_X: str
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     NEWSDATA_API_KEY: str
-    REDIS_URL: str= "http://localhost:6379"
+    REDIS_URL: str
 
 @lru_cache
 def get_settings():

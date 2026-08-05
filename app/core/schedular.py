@@ -43,9 +43,6 @@ async def fetch_news():
         data4 = response4.json()
         english_news = data1["results"] + data3["results"]
         hindi_news = data2["results"] + data4["results"]
-        # Stored as JSON, and awaited: the client is redis.asyncio, so an
-        # un-awaited `set` never runs, and a bare Python list is not a value
-        # Redis can take. Either one left `/get-news` with nothing to serve.
         await redis_client.set("english_news", json.dumps(english_news))
         await redis_client.set("hindi_news", json.dumps(hindi_news))
 
