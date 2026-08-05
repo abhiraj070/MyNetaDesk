@@ -14,6 +14,7 @@ import json
 from app.config.settings import get_settings
 from app.core.redis import redis_client
 from app.db.model.feedback import Feedback
+from app.core.schedular import fetch_news
 
 _settings= get_settings()
 
@@ -588,3 +589,7 @@ async def redis_test():
         "connected": True,
         "value": value
     }
+
+@app.get("/redis-test-news")
+async def redis_test_news():
+    await fetch_news()
