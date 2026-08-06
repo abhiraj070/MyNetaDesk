@@ -5,6 +5,7 @@ import { MotionConfig } from "framer-motion";
 import { useState } from "react";
 
 import { LanguageProvider } from "@/lib/i18n";
+import { LocationProvider } from "@/lib/location";
 
 export function Providers({ children }) {
   // Created in state so the client isn't shared between requests on the server
@@ -32,7 +33,14 @@ export function Providers({ children }) {
        * springs, the idle float and the entrance stagger.
        */}
       <MotionConfig reducedMotion="user">
-        <LanguageProvider>{children}</LanguageProvider>
+        {/*
+         * Both providers sit above the router's page slot, so the language
+         * choice and the resolved location outlive a navigation to `/brief`
+         * and back.
+         */}
+        <LanguageProvider>
+          <LocationProvider>{children}</LocationProvider>
+        </LanguageProvider>
       </MotionConfig>
     </QueryClientProvider>
   );

@@ -468,24 +468,40 @@ export async function fetchNews() {
 
   return items
     .map((article, index) => {
-      const description = clean(article?.description);
-      const content = clean(article?.content);
+      const described = trimTruncationArtifact(clean(article?.description));
+      const contented = trimTruncationArtifact(clean(article?.content));
+      const description = described.text;
+      const content = contented.text;
+      // GNews nests the newsroom in an object rather than sending the flat
+      // `source_name`/`source_id` pair the previous provider used.
+      const source = article?.source;
       return {
-        id: article?.article_id ?? article?.link ?? `story-${index}`,
+        id: article?.id ?? article?.url ?? `story-${index}`,
         title: clean(article?.title),
         // The preview is deliberately the short field; the detail sheet
         // prefers the longer one and falls back to the same text.
         preview: description || content,
         summary: content || description,
-        source: clean(article?.source_name) || clean(article?.source_id),
-        sourceIcon: url(article?.source_icon),
-        image: url(article?.image_url),
+        source: clean(source?.name),
+        // GNews sends no per-newsroom icon, so the card's lettered plate is
+        // the permanent path rather than a fallback.
+        sourceIcon: null,
+        image: url(article?.image),
         // Kept as the raw string: the card formats it against the reader's
         // language, which this layer knows nothing about.
-        publishedAt: clean(article?.pubDate) || null,
-        category: firstLabel(article?.category),
-        country: firstLabel(article?.country),
-        url: url(article?.link),
+        publishedAt: clean(article?.publishedAt) || null,
+        // Neither field exists on a GNews article — it sends no category, and
+        // its only country is the newsroom's own two-letter code, which would
+        // read as "IN" on every card in a feed that is Indian by definition.
+        // Left null so the card's chip slot stays empty rather than labelled
+        // with something the provider never said.
+        category: null,
+        country: null,
+        url: url(article?.url),
+        // The story was cut short by the provider's plan, not by us. The
+        // reader panel says so in words and points at the publisher rather
+        // than letting the text simply stop mid-sentence.
+        isPartial: described.truncated || contented.truncated,
       };
     })
     .filter((story) => story.title);
@@ -496,19 +512,28 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Free-tier feeds pad truncated bodies with their own bookkeeping — GNews
+ * signs off with `... [2772 chars]`, NewsAPI with `[+1234 chars]`. That is
+ * metadata about the response, not part of the story, and a reader should
+ * never see it.
+ *
+ * Stripped here at the boundary so no component has to know the provider's
+ * habits, and reported back as `truncated` so the reader panel can say the
+ * story continues at the publisher instead of just stopping mid-sentence.
+ * Whatever dangling punctuation the cut leaves behind is replaced with a
+ * single ellipsis, so the text ends deliberately rather than raggedly.
+ */
+const TRUNCATION_ARTIFACT = /[\s.…]*\[\s*\+?\s*[\d,]+\s*chars?\s*\]\s*$/i;
+
+function trimTruncationArtifact(value) {
+  if (!TRUNCATION_ARTIFACT.test(value)) return { text: value, truncated: false };
+  const body = value.replace(TRUNCATION_ARTIFACT, "").replace(/[\s.,;:—–-]+$/u, "");
+  return { text: body ? `${body}…` : "", truncated: true };
+}
+
 /** A URL we're willing to hand to `src`/`href`, or null. */
 function url(value) {
   const trimmed = clean(value);
   return /^https?:\/\//i.test(trimmed) ? trimmed : null;
-}
-
-/**
- * `["politics", "top"]` -> `"Politics"`. The provider sends these lowercased
- * and the card shows exactly one, so the first entry is title-cased here
- * rather than being restyled with `capitalize` at three call sites.
- */
-function firstLabel(value) {
-  const first = Array.isArray(value) ? clean(value[0]) : clean(value);
-  if (!first) return null;
-  return first.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

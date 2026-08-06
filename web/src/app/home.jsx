@@ -8,6 +8,7 @@ import { Menu, Newspaper } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { BottomActions } from "@/components/BottomActions";
+import { LiveDot } from "@/components/brief/LiveDot";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { FeedbackSuccess } from "@/components/feedback/FeedbackSuccess";
 import { PoliticianProfileSheet } from "@/components/profile/PoliticianProfileSheet";
@@ -21,6 +22,7 @@ import { ErrorScreen, LocatingScreen } from "@/components/StatusScreens";
 import { TodaysHighlight } from "@/components/TodaysHighlight";
 import { XDiscussionSheet } from "@/components/x/XDiscussionSheet";
 import { useMinistries } from "@/hooks/useMinistries";
+import { useScrolled } from "@/hooks/useScrolled";
 import {
   fetchCmByStateKey,
   fetchCmLocation,
@@ -28,6 +30,7 @@ import {
   toFriendlyError,
 } from "@/lib/api";
 import { GeolocationError, requestPosition } from "@/lib/geolocation";
+import { useLocationState } from "@/lib/location";
 import { rankOf } from "@/lib/ministries";
 import { useTranslation } from "@/lib/i18n";
 import { rise, SPRING_POP } from "@/lib/motion";
@@ -75,7 +78,12 @@ export function Home() {
   const deepLink = readDeepLink(useSearchParams());
   const { t, language, hasChosen, isHydrated } = useTranslation();
 
-  const [coords, setCoords] = useState(deepLink.coords);
+  // Held above the router (see `lib/location`) so leaving for `/brief` and
+  // coming back doesn't discard it. A `?share=cm&lat=&lng=` link needs no such
+  // help: those coordinates live in the URL, which the back navigation
+  // restores along with the page.
+  const { coords: storedCoords, setCoords } = useLocationState();
+  const coords = storedCoords ?? deepLink.coords;
   const [geoError, setGeoError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
   const [openSheet, setOpenSheet] = useState(null); // "info" | "leaderboard" | "search" | "x" | null
@@ -165,7 +173,9 @@ export function Home() {
     } finally {
       setIsLocating(false);
     }
-  }, []);
+    // `setCoords` is a `useState` setter handed down by `LocationProvider`, so
+    // it is stable — declared only to satisfy the exhaustive-deps rule.
+  }, [setCoords]);
 
   const subject =
     leaderboardSubject ?? buildSubject(selectedSearchResult, data?.cm);
@@ -490,6 +500,7 @@ function ResultsHeader({
   onOpenMenu,
 }) {
   const { t } = useTranslation();
+  const scrolled = useScrolled();
   // The state chip only ever applies to the actual home CM (resolved from
   // the user's own location) — a minister, a searched-in CM, or a
   // leaderboard-navigated CM all show the back button in this slot instead.
@@ -502,10 +513,25 @@ function ResultsHeader({
     // The hamburger is a sibling of the bar, not a child of it: the bar gives
     // up that much width so the button sits clear of the glass surface, which
     // is what makes it read as a separate control rather than a nav item.
+    //
+    // `sticky` rather than `fixed`: the header keeps its place in the flex
+    // column, so the card below it needs no compensating offset and can never
+    // end up hidden underneath it.
+    //
+    // `z-30` is the app's chrome layer, shared with the bottom action bar —
+    // the two are the same kind of object and never overlap each other. The
+    // scale it sits in is: page content up to `z-20` (the vote flight is the
+    // highest of those), chrome at `z-30`, sheets at `z-40`, modals at `z-50`.
+    // Anything higher here would only break the sheets: `BottomSheet` is
+    // `z-40`, so a `z-40` header would tie with it and be settled by DOM order
+    // alone — leaving the nav one refactor away from floating on top of its
+    // own dimmed backdrop.
     <motion.header
       {...rise(0)}
-      className="flex shrink-0 items-center gap-2.5 pt-1 pb-3 sm:pb-4"
+      className="sticky top-0 z-30 flex shrink-0 items-center gap-2.5 pt-1 pb-3 sm:pb-4"
     >
+      <StickyScrim scrolled={scrolled} />
+
       <button
         type="button"
         onClick={onOpenMenu}
@@ -546,8 +572,17 @@ function ResultsHeader({
 }
 
 /**
- * Political Brief launcher. Same geometry as the location pill (`NAV_CONTROL`'s
- * h-9 / size-9 pairing) so the two controls in the bar line up exactly.
+ * Political Brief launcher, as a broadcast indicator rather than a plain icon.
+ *
+ * The newspaper glyph alone said "there is a news page"; the pulsing red dot
+ * says "there is something on it right now", which is the whole reason to tap
+ * it. It shares the `LiveDot` component with the brief's own masthead and card
+ * badges, so every live mark in the product breathes on identical timing.
+ *
+ * The wordmark is held back until `sm`: at 375px the bar already carries the
+ * app name and the state pill, and a third label there would push the state
+ * name into an ellipsis. Below that breakpoint the dot and glyph carry it,
+ * and `aria-label` names the destination at every width.
  *
  * A real link rather than a button that pushes: `/brief` is a page of its own,
  * so it should be openable in a new tab and prefetched like any other route.
@@ -559,11 +594,47 @@ function BriefLink() {
   return (
     <Link
       href="/brief"
-      aria-label={t("brief.title")}
-      className={`${NAV_CONTROL} flex size-9 shrink-0 items-center justify-center text-muted transition-[color,transform] duration-200 hover:-translate-y-px hover:text-ink active:scale-95`}
+      aria-label={`${t("brief.liveNews")} — ${t("brief.title")}`}
+      className={`${NAV_CONTROL} flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-muted transition-[color,transform] duration-200 hover:-translate-y-px hover:text-ink active:scale-95 sm:gap-2 sm:px-3`}
     >
-      <Newspaper className="size-4" strokeWidth={2.2} />
+      <LiveDot />
+      <Newspaper className="size-4 shrink-0" strokeWidth={2.2} />
+      <span className="hidden font-display text-[11px] leading-none font-bold tracking-[0.08em] text-ink uppercase sm:inline">
+        {t("brief.liveNews")}
+      </span>
     </Link>
+  );
+}
+
+/**
+ * The plate that slides in behind the nav once the page moves.
+ *
+ * At rest there is nothing here: the bar is a floating glass card over the
+ * page's ambient gradient, and that is the look the screen opens on. Once
+ * content starts passing underneath, this fades in to give the bar something
+ * opaque to sit on, so a photograph scrolling behind the wordmark doesn't turn
+ * it to mush.
+ *
+ * Full-bleed by negative inset rather than `w-screen`: `100vw` includes the
+ * desktop scrollbar and would hand the page a horizontal scroll of its own.
+ * The insets match the container's own padding exactly (`px-4` / `sm:px-6`),
+ * which on a phone reaches the screen edges and on a wide window reaches the
+ * edges of the content column — and nothing scrolls outside that column.
+ *
+ * One transition on `opacity` alone: the border and the shadow are always set
+ * and simply fade in with the plate, so the three cannot drift out of step,
+ * and the browser animates a single compositor-friendly property. An element
+ * at `opacity: 0` also contributes no `backdrop-filter`, so the blur genuinely
+ * switches off at rest instead of blurring the gradient for nothing.
+ */
+function StickyScrim({ scrolled }) {
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute -top-2 -right-4 -bottom-0 -left-4 -z-10 border-b border-ink/[0.07] bg-paper/72 shadow-[0_8px_24px_-16px_rgb(23_22_51_/_0.45)] backdrop-blur-xl backdrop-saturate-150 transition-opacity duration-[240ms] ease-out sm:-top-3 sm:-right-6 sm:-left-6 ${
+        scrolled ? "opacity-100" : "opacity-0"
+      }`}
+    />
   );
 }
 

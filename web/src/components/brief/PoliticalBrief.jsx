@@ -12,16 +12,15 @@ import { useTranslation } from "@/lib/i18n";
 import { rise } from "@/lib/motion";
 
 /**
- * The Political Brief: one story, chosen for the day.
+ * The Political Brief: the day's political stories, newest first.
  *
- * Deliberately a single card and nothing else — no rail of runners-up, no
- * counter, no rest of the feed. The whole point of the surface is that the
- * reader knows what today's biggest political story is before they have
- * decided whether to scroll.
+ * One card per story, in the order the feed hands them over — the provider
+ * already sorts by publication time, so the top card is the latest story and
+ * the page needs no ranking of its own.
  *
  * The rest of the app sits on a bright three-colour ambient gradient; here it
- * is covered by a flat near-white so the photograph is the only colour on
- * screen. Nothing dated is shown anywhere except the story's own publication
+ * is covered by a flat near-white so the photographs are the only colour on
+ * screen. Nothing dated is shown anywhere except each story's own publication
  * day: no relative times, no counts, nothing that would make the page read
  * differently at midnight than it did at breakfast.
  */
@@ -31,10 +30,8 @@ export function PoliticalBrief() {
   const { stories, isPending, isError, isFetching, refetch } = useNews();
   const [openStory, setOpenStory] = useState(null);
 
-  const story = stories[0] ?? null;
-
   return (
-    <div className="relative mx-auto flex min-h-dvh w-full max-w-xl flex-col px-4 pt-2 pb-12 sm:px-6">
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 pt-2 pb-16 sm:px-6">
       <div aria-hidden className="fixed inset-0 -z-10 bg-brief-page" />
 
       <motion.header {...rise(0)} className="shrink-0">
@@ -43,7 +40,7 @@ export function PoliticalBrief() {
             type="button"
             onClick={() => router.back()}
             aria-label={t("nav.back")}
-            className="-ml-2 flex size-10 items-center justify-center rounded-full text-[#3a3a46] transition-colors hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="-ml-2 flex size-10 items-center justify-center rounded-full text-brief-meta transition-colors hover:bg-brief-ink/[0.06] hover:text-brief-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent"
           >
             <ArrowLeft className="size-[19px]" strokeWidth={2} />
           </button>
@@ -52,29 +49,46 @@ export function PoliticalBrief() {
           </p>
         </div>
 
-        <div className="pt-[18px] pb-[18px]">
-          {/* The one place on this screen still set in the app's own face —
-              the brief belongs to MyNetaji; the story inside it does not. */}
-          <h1 className="font-display text-2xl leading-7 font-bold tracking-[-0.01em] text-brief-ink">
+        <div className="pt-6 pb-5">
+          {/* Set in the editorial face, not the app's rounded display one.
+              The wordmark above stays Fredoka because that is the brand
+              signing the page; this line is the masthead of a newsroom
+              surface, and a rounded geometric cut at 34px reads as a game
+              logo sitting on top of an otherwise sober page.
+
+              The live mark lives on each story's photograph rather than up
+              here: it belongs to the stories, and repeating it in the
+              masthead only diluted it. */}
+          <h1 className="font-editorial text-[30px] leading-9 font-bold tracking-[-0.032em] text-brief-ink sm:text-[34px] sm:leading-10">
             {t("brief.title")}
           </h1>
-          <p className="mt-[5px] font-editorial text-[13px] leading-[18px] text-brief-meta">
+          <p className="mt-2 max-w-md font-editorial text-[14.5px] leading-[22px] text-brief-meta">
             {t("brief.subtitle")}
           </p>
         </div>
+
+        {/* A plain hairline separating the masthead from the feed. */}
+        <div aria-hidden className="h-px w-full bg-brief-rule" />
       </motion.header>
 
-      <main className="flex-1">
+      <main className="flex-1 pt-7">
         {isPending ? (
           <LoadingCard />
         ) : isError ? (
           <ErrorState onRetry={refetch} isRetrying={isFetching} />
-        ) : !story ? (
+        ) : stories.length === 0 ? (
           <EmptyState />
         ) : (
           <>
-            <BriefCard story={story} onOpen={setOpenStory} />
-            <p className="pt-4 text-center font-editorial text-[11px] leading-[14px] tracking-[0.02em] text-brief-faint">
+            {/* Roomier than the card's internal rhythm on purpose: each story
+                is its own object, and the gap between them is what stops the
+                stack from reading as one long list. */}
+            <div className="flex flex-col gap-6 sm:gap-7">
+              {stories.map((story) => (
+                <BriefCard key={story.id} story={story} onOpen={setOpenStory} />
+              ))}
+            </div>
+            <p className="pt-9 text-center font-editorial text-[11.5px] leading-4 tracking-[0.02em] text-brief-faint">
               {t("brief.footnote")}
             </p>
           </>
@@ -86,11 +100,23 @@ export function PoliticalBrief() {
   );
 }
 
-/** A spinner would say "wait"; this says "here is what is coming". */
+/**
+ * A spinner would say "wait"; this says "here is what is coming".
+ *
+ * Three placeholders rather than one, because the feed is a stack — a single
+ * skeleton resolving into twenty cards is a bigger jump than the skeleton was
+ * meant to smooth over.
+ */
 function LoadingCard() {
   const { t } = useTranslation();
   return (
-    <div role="status" aria-label={t("brief.loading")}>
+    <div
+      role="status"
+      aria-label={t("brief.loading")}
+      className="flex flex-col gap-6 sm:gap-7"
+    >
+      <BriefCardSkeleton />
+      <BriefCardSkeleton />
       <BriefCardSkeleton />
     </div>
   );
@@ -106,9 +132,9 @@ function StateShell({ title, body, action }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-      className="rounded-[18px] bg-surface px-6 py-12 text-center font-editorial shadow-brief ring-1 ring-brief-line"
+      className="rounded-brief bg-surface px-6 py-14 text-center font-editorial shadow-brief ring-1 ring-brief-line"
     >
-      <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-brief-chip">
+      <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-brief-chip">
         <svg
           viewBox="0 0 24 24"
           className="size-5 text-brief-faint"
@@ -151,7 +177,7 @@ function ErrorState({ onRetry, isRetrying }) {
           disabled={isRetrying}
           whileHover={isRetrying ? undefined : { y: -1 }}
           whileTap={isRetrying ? undefined : { scale: 0.98 }}
-          className="mt-5 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold tracking-[-0.01em] text-[#1b1b24] ring-1 ring-brief-line transition-colors hover:bg-brief-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60"
+          className="mt-6 inline-flex items-center gap-2 rounded-brief-control bg-brief-accent px-5 py-2.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-brief-cta transition-colors hover:bg-brief-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brief-accent disabled:opacity-60"
         >
           <RefreshCw
             className={`size-[15px] ${isRetrying ? "animate-spin" : ""}`}

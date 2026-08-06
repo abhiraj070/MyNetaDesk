@@ -51,22 +51,66 @@
    * sit closer to true grey so the headline reads as printed. Kept as their
    * own `brief-*` scale rather than as overrides, so nothing else moves.
    */
-  --color-brief-ink: #14141c;
-  --color-brief-body: #5a5a68;
-  --color-brief-source: #5c5c6a;
-  --color-brief-meta: #6e6e7c;
-  --color-brief-faint: #8e8e9b;
-  --color-brief-line: #e9e9ef;
-  --color-brief-rule: #ededf2;
-  --color-brief-chip: #f4f4f7;
-  --color-brief-page: #f6f6f9;
-  --color-brief-placeholder: #f1f1f5;
+  --color-brief-ink: #101319;
+  --color-brief-body: #565f6e;
+  --color-brief-source: #3f4652;
+  --color-brief-meta: #6b7280;
+  --color-brief-faint: #98a0ad;
+  --color-brief-line: #e6e8ec;
+  --color-brief-rule: #eceef2;
+  --color-brief-chip: #f1f3f6;
+  --color-brief-page: #f7f8fa;
+  --color-brief-placeholder: #eef0f4;
 
-  /* Flatter than `--shadow-card`: a broadsheet lying on a table, not a tile
-     floating over one. */
+  /*
+   * The masthead red. Rationed on purpose: the LIVE indicator, the breaking
+   * badge, the primary CTA, active states and the hairline under the header —
+   * and nothing else. A newsroom red earns its authority by being the only
+   * saturated thing on a page of greys; spend it on a surface and the page
+   * starts shouting.
+   */
+  --color-brief-accent: #c0182b;
+  --color-brief-accent-strong: #9b1122;
+  --color-brief-accent-wash: #fdecee;
+
+  /*
+   * Elevation for the brief, three steps on one light source. Each is a
+   * contact shadow (tight, dark) under an ambient one (wide, soft) — the
+   * falloff between them is what makes a card read as a physical sheet rather
+   * than a div with a blur behind it.
+   *
+   *   brief      — the card at rest
+   *   brief-lift — the card under the cursor
+   *   brief-cta  — the primary action, tinted with its own red so the button
+   *                appears lit by the colour it is painted in
+   *   brief-sheet— the reader panel over the dimmed page
+   */
   --shadow-brief:
-    0 1px 2px rgb(20 20 28 / 0.04),
-    0 12px 28px -16px rgb(20 20 28 / 0.16);
+    0 1px 2px rgb(16 19 25 / 0.04),
+    0 2px 6px -2px rgb(16 19 25 / 0.05),
+    0 16px 32px -20px rgb(16 19 25 / 0.20);
+  --shadow-brief-lift:
+    0 1px 2px rgb(16 19 25 / 0.05),
+    0 8px 16px -6px rgb(16 19 25 / 0.10),
+    0 28px 52px -26px rgb(16 19 25 / 0.32);
+  --shadow-brief-cta:
+    0 1px 2px rgb(155 17 34 / 0.24),
+    0 8px 18px -8px rgb(192 24 43 / 0.42);
+  /* The hover state of a card: the same geometry as `brief-lift`, but the
+     widest layer is tinted with the masthead red so the card appears to warm
+     under the cursor rather than merely rise. Kept well below the CTA's
+     saturation — a glow this size reads as light, not as colour. */
+  --shadow-brief-glow:
+    0 1px 2px rgb(16 19 25 / 0.05),
+    0 10px 20px -8px rgb(16 19 25 / 0.12),
+    0 30px 56px -28px rgb(192 24 43 / 0.38);
+  --shadow-brief-sheet:
+    0 -1px 2px rgb(16 19 25 / 0.04),
+    0 -24px 60px -20px rgb(16 19 25 / 0.28);
+
+  /* Larger than the app's own controls: a broadsheet has generous corners. */
+  --radius-brief: 24px;
+  --radius-brief-control: 14px;
 
   --radius-card: 30px;
   --radius-control: 18px;
@@ -237,6 +281,48 @@ button:not(:disabled),
   background: radial-gradient(circle, rgb(255 255 255 / 0.95) 0%, transparent 70%);
   animation: sparkle-twinkle var(--sparkle-dur, 5s) ease-in-out infinite;
   animation-delay: var(--sparkle-delay, 0s);
+}
+
+/*
+ * The LIVE indicator on the Political Brief: a solid red core with a halo
+ * breathing out of it, the way a recording light does.
+ *
+ * Two elements rather than one animated box-shadow, because a spreading
+ * box-shadow repaints on every frame while a scaling, fading sibling stays on
+ * the compositor. The halo is `pointer-events: none` and sits behind the core,
+ * so it never grows the indicator's hit area or its layout box.
+ *
+ * Slow (2.4s) and shallow on purpose — a fast blink reads as an alarm. The
+ * reduced-motion block below stops both and leaves a plain red dot.
+ */
+@keyframes live-halo {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  70%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.live-halo {
+  animation: live-halo 2.4s cubic-bezier(0.2, 0, 0.4, 1) infinite;
+}
+
+@keyframes live-core {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.live-core {
+  animation: live-core 2.4s ease-in-out infinite;
 }
 
 /* The sweep used by skeleton placeholders while data loads. */
