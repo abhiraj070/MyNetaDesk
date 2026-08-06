@@ -23,8 +23,47 @@
     "feedback": "Feedback",
     "back": "← Back",
     "backToCm": "← Back to your CM",
+    "startOver": "Start over",
     "language": "Language",
     "actions": "Actions"
+  },
+  "onboarding": {
+    "gotIt": "Got it",
+    "skip": "Skip all",
+    "progress": "Step {{current}} of {{total}}",
+    "replay": "Replay tutorial",
+    "replayHint": "Take the quick tour again",
+    "steps": {
+      "search": {
+        "title": "Search",
+        "body": "Search any Chief Minister or Union Minister across India."
+      },
+      "leaderboard": {
+        "title": "Leaderboard",
+        "body": "See which leaders have received the most Roses and Slaps across the country."
+      },
+      "info": {
+        "title": "Info",
+        "body": "Learn more about the current leader, their profile, promises, and additional information."
+      },
+      "posts": {
+        "title": "X Posts",
+        "body": "Read what people are discussing about today's politics on X."
+      },
+      "news": {
+        "title": "News",
+        "body": "Read today's biggest political headlines from trusted publishers."
+      },
+      "highlights": {
+        "title": "Today's Highlights",
+        "body": "See who's being praised, criticized, and talked about today in India."
+      }
+    },
+    "done": {
+      "title": "You're all set!",
+      "body": "Explore leaders, stay informed, and make your voice count.",
+      "cta": "Let's Go"
+    }
   },
   "landing": {
     "eyebrow": "Verdicts · India",
@@ -130,6 +169,7 @@
     "overview": "Overview",
     "manifestos": "Manifestos",
     "journey": "Political Journey",
+    "performance": "Performance",
     "sectionAria": "Profile section",
     "atAGlance": "At a Glance",
     "quickInsights": "Quick Insights",
@@ -245,6 +285,53 @@
     "empty": "No posts yet.",
     "failed": "Couldn't load posts. Try again?",
     "refresh": "Refresh"
+  },
+  "comingSoon": {
+    "cta": "Looking Forward",
+    "roadmap": "Coming Soon",
+    "badge": "Coming soon",
+    "live": "Live",
+    "x": {
+      "headerTitle": "X Pulse",
+      "headerSubtitle": "Real-time political conversation",
+      "title": "X Pulse is Coming Soon",
+      "body": "Soon you'll be able to explore real-time political conversations, trending discussions, and public reactions from across India—all in one place.",
+      "verified": "Verified Account",
+      "feature": {
+        "discussions": "Live political discussions",
+        "trending": "Trending topics",
+        "accounts": "Verified leader accounts",
+        "moments": "Viral political moments",
+        "sentiment": "Public sentiment from X"
+      },
+      "noteTitle": "Built for Real-Time Politics",
+      "noteBody": "This section will bring together live conversations from X so you can see how the public is reacting as events unfold."
+    },
+    "performance": {
+      "title": "Performance is Coming Soon",
+      "body": "We're building powerful transparency tools to help you understand how leaders perform beyond promises.",
+      "basicProfile": "Basic Profile",
+      "metric": {
+        "fundsAllocated": "Funds Allocated",
+        "fundsUtilized": "Funds Utilized",
+        "utilizationRate": "Fund Utilization Rate",
+        "projectsInitiated": "Projects Initiated",
+        "projectsCompleted": "Projects Completed",
+        "projectsOngoing": "Ongoing Projects",
+        "developmentProgress": "Development Progress",
+        "spendingInsights": "Public Spending Insights",
+        "analytics": "Performance Analytics"
+      },
+      "noteTitle": "Coming in Future Updates",
+      "future": {
+        "projects": "Detailed development projects",
+        "funds": "Constituency fund tracking",
+        "timelines": "Project completion timelines",
+        "transparency": "Public spending transparency",
+        "analytics": "Government performance analytics",
+        "visualisations": "Interactive visualizations"
+      }
+    }
   },
   "share": {
     "copied": "Link copied — paste it anywhere.",

@@ -4,6 +4,7 @@ import { Info, Search, Share2, Trophy } from "lucide-react";
 
 import { IconAction } from "./ui/IconAction";
 import { useTranslation } from "@/lib/i18n";
+import { useOnboardingTarget } from "@/lib/onboarding";
 import { XLogo } from "./x/XLogo";
 
 /**
@@ -25,6 +26,14 @@ export function BottomActions({
 }) {
   const { t } = useTranslation();
 
+  // Registers each button with the onboarding layer so the first-run tour can
+  // spotlight it. Nothing else changes: these are ref callbacks, so a button
+  // that is never toured behaves exactly as before.
+  const searchRef = useOnboardingTarget("nav-search");
+  const leaderboardRef = useOnboardingTarget("nav-leaderboard");
+  const infoRef = useOnboardingTarget("nav-info");
+  const discussionRef = useOnboardingTarget("nav-x");
+
   return (
     // Not sticky itself — the page wraps this in the sticky, entrance-animated
     // container so the two concerns don't nest.
@@ -36,14 +45,30 @@ export function BottomActions({
           aria-hidden
           className="pointer-events-none absolute inset-x-6 top-px h-px rounded-full bg-white/70"
         />
-        <IconAction label={t("nav.search")} onClick={onOpenSearch} icon={Search} />
+        <IconAction
+          label={t("nav.search")}
+          onClick={onOpenSearch}
+          icon={Search}
+          anchorRef={searchRef}
+        />
         <IconAction
           label={t("nav.leaderboard")}
           onClick={onOpenLeaderboard}
           icon={Trophy}
+          anchorRef={leaderboardRef}
         />
-        <IconAction label={t("nav.information")} onClick={onOpenInfo} icon={Info} />
-        <IconAction label={t("nav.discussion")} onClick={onOpenX} icon={XLogo} />
+        <IconAction
+          label={t("nav.information")}
+          onClick={onOpenInfo}
+          icon={Info}
+          anchorRef={infoRef}
+        />
+        <IconAction
+          label={t("nav.discussion")}
+          onClick={onOpenX}
+          icon={XLogo}
+          anchorRef={discussionRef}
+        />
         <IconAction
           label={t("nav.share")}
           onClick={onShare}

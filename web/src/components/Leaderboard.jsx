@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { useId, useState } from "react";
 
 import { useLeaderboard } from "@/hooks/useLeaderboard";
@@ -144,7 +144,16 @@ function TierBoard({ tier, board, highlightName, onSelectTopper, pendingKey }) {
   );
 }
 
-/** A pill-switcher, reused for both the tier tabs and the board sub-tabs. */
+/**
+ * A pill-switcher, reused for the tier tabs, the board sub-tabs and the profile
+ * sheet's sections.
+ *
+ * An option may be `locked`: it still reports its press to `onChange`, but it
+ * never takes the pill and never reads as selected. What that press means is
+ * the caller's to decide — the profile sheet opens a preview of the feature
+ * instead of switching to it — which keeps "what a locked tab does" out of a
+ * component whose job is only to draw the row.
+ */
 export function PillTabs({ options, value, onChange, ariaLabel }) {
   const instanceId = useId();
   const pillId = `lb-pill-${instanceId}`;
@@ -156,7 +165,8 @@ export function PillTabs({ options, value, onChange, ariaLabel }) {
       className="relative inline-flex shrink-0 rounded-full bg-surface-2 p-1 ring-1 ring-ink/5"
     >
       {options.map((option) => {
-        const isActive = value === option.value;
+        const isLocked = Boolean(option.locked);
+        const isActive = !isLocked && value === option.value;
         return (
           <button
             key={option.value}
@@ -164,11 +174,16 @@ export function PillTabs({ options, value, onChange, ariaLabel }) {
             type="button"
             aria-selected={isActive}
             onClick={() => onChange(option.value)}
-            className="relative z-10 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-display text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className={`relative z-10 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-display text-xs font-semibold whitespace-nowrap transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+              // Held back rather than switched off: it is a real destination,
+              // just not one that has opened yet.
+              isLocked ? "opacity-60 hover:opacity-80" : ""
+            }`}
             style={{ color: isActive ? "var(--color-ink)" : "var(--color-muted)" }}
           >
             {option.emoji && <span aria-hidden>{option.emoji}</span>}
             {option.label}
+            {isLocked && <Lock className="size-3" strokeWidth={2.75} aria-hidden />}
             {isActive && (
               <motion.span
                 layoutId={pillId}

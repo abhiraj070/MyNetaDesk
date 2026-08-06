@@ -2,12 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, Newspaper } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { BottomActions } from "@/components/BottomActions";
+import { HOME_TOUR_STEPS } from "@/components/onboarding/homeTour";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { LiveDot } from "@/components/brief/LiveDot";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { FeedbackSuccess } from "@/components/feedback/FeedbackSuccess";
@@ -34,6 +36,7 @@ import { useLocationState } from "@/lib/location";
 import { rankOf } from "@/lib/ministries";
 import { useTranslation } from "@/lib/i18n";
 import { rise, SPRING_POP } from "@/lib/motion";
+import { useOnboarding, useOnboardingTarget } from "@/lib/onboarding";
 import { NAV_CONTROL, NAV_MENU_BUTTON, NAV_SURFACE } from "@/lib/navStyles";
 
 const RANK_ORDER = {
@@ -83,7 +86,13 @@ export function Home() {
   // help: those coordinates live in the URL, which the back navigation
   // restores along with the page.
   const { coords: storedCoords, setCoords } = useLocationState();
-  const coords = storedCoords ?? deepLink.coords;
+  const router = useRouter();
+  // Set when the reader taps the wordmark to start over. The URL is rewritten
+  // at the same moment, but this is what the render actually keys off: clearing
+  // the stored coordinates alone would fall straight back through to the ones
+  // in a `?share=cm&lat=&lng=` link and put the card back on screen.
+  const [deepLinkDropped, setDeepLinkDropped] = useState(false);
+  const coords = storedCoords ?? (deepLinkDropped ? null : deepLink.coords);
   const [geoError, setGeoError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
   const [openSheet, setOpenSheet] = useState(null); // "info" | "leaderboard" | "search" | "x" | null
@@ -261,6 +270,31 @@ export function Home() {
     setLeaderboardSubject(null);
   }, []);
 
+  /**
+   * The wordmark: back to the landing screen, which asks for location again.
+   *
+   * Everything that can put a subject on screen is cleared, not just the
+   * coordinates — a searched minister, a leaderboard profile and a pending
+   * deep-link seed each resolve to a card on their own, and leaving any of
+   * them set would land the reader straight back where they started.
+   *
+   * The URL is replaced rather than pushed: "start over" is not a place in the
+   * reader's history, and a Back press should return them to wherever they came
+   * from rather than to the card they just dismissed.
+   */
+  const handleRestart = useCallback(() => {
+    setCoords(null);
+    setDeepLinkDropped(true);
+    setSelectedSearchResult(null);
+    setLeaderboardSubject(null);
+    setPendingMinisterName(null);
+    setPendingCmState(null);
+    setGeoError(null);
+    setOpenSheet(null);
+    setLastVote(null);
+    router.replace("/", { scroll: false });
+  }, [setCoords, router]);
+
   const handleShare = useCallback(
     async (currentChoice) => {
       if (!subject || typeof window === "undefined") return;
@@ -319,6 +353,34 @@ export function Home() {
     isSeeding: Boolean(pendingCmState),
   });
 
+  const highlightsRef = useOnboardingTarget("todays-highlights");
+  const { hasCompleted: tourCompleted, isTourOpen, startTour } = useOnboarding();
+
+  /*
+   * The first-run tutorial starts here and nowhere else: only once a
+   * representative is actually on screen, never on the landing or locating
+   * screens, and never for someone who has already been through it.
+   *
+   * It also waits on `hasChosen`, because the language prompt is the genuinely
+   * first-run modal — a coach mark pointing at a nav button hidden behind that
+   * modal's backdrop would be pointing at nothing. The delay lets the page's
+   * own entrance stagger (the last section lands at 0.24s plus its spring)
+   * finish, so the spotlight opens on a settled screen.
+   */
+  const tourCanStart =
+    stage === "results" &&
+    Boolean(subject) &&
+    isHydrated &&
+    hasChosen &&
+    !tourCompleted &&
+    !isTourOpen;
+
+  useEffect(() => {
+    if (!tourCanStart) return;
+    const timer = setTimeout(startTour, 900);
+    return () => clearTimeout(timer);
+  }, [tourCanStart, startTour]);
+
   return (
     <main className="flex min-h-dvh flex-col">
       {stage === "landing" && (
@@ -367,6 +429,7 @@ export function Home() {
         >
           <ResultsHeader
             subject={subject}
+            onRestart={handleRestart}
             onResetToHome={
               leaderboardSubject
                 ? handleBackFromLeaderboardProfile
@@ -385,7 +448,7 @@ export function Home() {
             onFirstVote={handleVoteCast}
           />
 
-          <motion.div {...rise(0.18)}>
+          <motion.div {...rise(0.18)} ref={highlightsRef}>
             {/* Reuses the leaderboard's own row handler, so a highlight tile
                 opens exactly the profile a leaderboard row would — same fetch,
                 same card, same back button. */}
@@ -468,6 +531,11 @@ export function Home() {
 
           <Toast message={toast} />
 
+          {/* The onboarding layer, mounted last so it is the topmost thing on
+              the page and can dim everything else. It renders nothing until
+              the tour is running. */}
+          <OnboardingTour steps={HOME_TOUR_STEPS} />
+
           <FeedbackSheet
             open={feedbackOpen}
             onClose={() => setFeedbackOpen(false)}
@@ -496,6 +564,7 @@ export function Home() {
 function ResultsHeader({
   subject,
   onResetToHome,
+  onRestart,
   backLabel,
   onOpenMenu,
 }) {
@@ -543,10 +612,20 @@ function ResultsHeader({
 
       <div className={`flex min-w-0 flex-1 items-center gap-3 py-2 pr-2 pl-4 ${NAV_SURFACE}`}>
         {/* shrink-0: the wordmark never compresses, however long the state name
-            gets — it is the one fixed anchor the bar is balanced around. */}
-        <p className="shrink-0 font-display text-lg leading-none font-bold tracking-tight text-ink">
+            gets — it is the one fixed anchor the bar is balanced around.
+
+            It is also the way back to the start: tapping it drops the resolved
+            location and returns to the landing screen, which asks for it again.
+            `aria-label` carries that meaning, since the visible word alone
+            ("MyNetaji") says where you are, not what pressing it does. */}
+        <button
+          type="button"
+          onClick={onRestart}
+          aria-label={t("nav.startOver")}
+          className="shrink-0 rounded-full font-display text-lg leading-none font-bold tracking-tight text-ink transition-opacity hover:opacity-65 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand active:opacity-50"
+        >
           MyNetaji
-        </p>
+        </button>
 
         {/* min-w-0 lets this group absorb the remaining width and, only when a
             very long name genuinely runs out of room, allows the pill inside
@@ -591,8 +670,12 @@ function ResultsHeader({
  */
 function BriefLink() {
   const { t } = useTranslation();
+  // News is the one toured control that lives in the app bar rather than the
+  // bottom row, so its coach mark hangs below it instead of above.
+  const newsRef = useOnboardingTarget("nav-news");
   return (
     <Link
+      ref={newsRef}
       href="/brief"
       aria-label={`${t("brief.liveNews")} — ${t("brief.title")}`}
       className={`${NAV_CONTROL} flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-muted transition-[color,transform] duration-200 hover:-translate-y-px hover:text-ink active:scale-95 sm:gap-2 sm:px-3`}

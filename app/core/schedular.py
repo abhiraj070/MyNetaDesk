@@ -57,7 +57,7 @@ async def fetch_news():
 scheduler.add_job(
     fetch_news,
     trigger="interval",
-    hours=6,
+    hours=3,
     id="daily_job",
     replace_existing=True,
 )

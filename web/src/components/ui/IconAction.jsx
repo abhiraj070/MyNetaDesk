@@ -11,6 +11,12 @@ import { SPRING_POP, SPRING_PRESS } from "@/lib/motion";
  *
  * `highlight` marks it as active (the Share button once a vote lands) with a
  * filled accent colour only — no extra motion.
+ *
+ * `anchorRef` is an escape hatch for anything that needs to measure the button
+ * itself — today only the onboarding spotlight, which reads its position to
+ * decide where to punch the hole in the overlay. Named rather than relying on
+ * `ref` passthrough so it is obvious at the call site that a caller is taking
+ * hold of the DOM node.
  */
 export function IconAction({
   label,
@@ -18,12 +24,14 @@ export function IconAction({
   icon: Icon,
   size = "md",
   highlight = false,
+  anchorRef,
 }) {
   const dimensions = size === "lg" ? "size-14" : "size-11";
   const iconSize = size === "lg" ? "size-6" : "size-5";
 
   return (
     <motion.button
+      ref={anchorRef}
       type="button"
       onClick={onClick}
       aria-label={label}

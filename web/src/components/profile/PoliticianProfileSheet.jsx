@@ -1,11 +1,14 @@
 "use client";
 
+import { Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import { BottomSheet } from "../BottomSheet";
 import { useTranslation } from "@/lib/i18n";
+import { useOnboarding } from "@/lib/onboarding";
 import { PillTabs } from "../Leaderboard";
 import { AssetBreakdownSheet } from "./AssetBreakdownSheet";
+import { PerformancePreviewSheet } from "./PerformancePreviewSheet";
 import { ProfileOverviewTab } from "./ProfileOverviewTab";
 import { ProfileJourneyTab } from "./ProfileJourneyTab";
 import { ProfileManifestosTab } from "./ProfileManifestosTab";
@@ -19,6 +22,11 @@ const TABS = [
   { value: "overview", key: "profile.overview" },
   { value: "manifestos", key: "profile.manifestos" },
   { value: "journey", key: "profile.journey" },
+  // Locked: pressing it opens a preview of what Performance will hold rather
+  // than switching to an empty section. It stays in the row (rather than
+  // waiting until launch) because seeing it is the point — the reader learns
+  // the feature exists and is being built.
+  { value: "performance", key: "profile.performance", locked: true },
 ];
 
 /**
@@ -43,6 +51,17 @@ export function PoliticianProfileSheet({ open, onClose, subject }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("overview");
   const [assetsOpen, setAssetsOpen] = useState(false);
+  const [performanceOpen, setPerformanceOpen] = useState(false);
+
+  // The locked tab is a door to a preview, not a section: pressing it leaves
+  // the current tab exactly where it was.
+  const handleTabChange = (next) => {
+    if (next === "performance") {
+      setPerformanceOpen(true);
+      return;
+    }
+    setTab(next);
+  };
 
   // Resets to Overview (and closes the assets sheet) on every open — and if
   // the subject changes while already open — via the React-endorsed "adjust
@@ -56,6 +75,7 @@ export function PoliticianProfileSheet({ open, onClose, subject }) {
     if (openKey !== null) {
       setTab("overview");
       setAssetsOpen(false);
+      setPerformanceOpen(false);
     }
   }
 
@@ -69,13 +89,21 @@ export function PoliticianProfileSheet({ open, onClose, subject }) {
   return (
     <>
       <BottomSheet open={open} onClose={onClose} title={subject.name} subtitle={role} size="tall">
-        <div className="sticky top-0 z-10 -mx-6 mb-5 bg-surface px-6 pt-1 pb-3">
-          <PillTabs
-            options={TABS.map((entry) => ({ ...entry, label: t(entry.key) }))}
-            value={tab}
-            onChange={setTab}
-            ariaLabel={t("profile.sectionAria")}
-          />
+        {/* Four tabs no longer fit across a 375px phone, so the row scrolls
+            sideways inside the sticky strip rather than wrapping to two lines
+            or squeezing the labels. The negative margin lets it scroll edge to
+            edge while the padding keeps the first pill aligned with the
+            content; `no-scrollbar` hides the bar the row would otherwise
+            introduce on desktop. */}
+        <div className="sticky top-0 z-10 -mx-6 mb-5 bg-surface pt-1 pb-3">
+          <div className="no-scrollbar overflow-x-auto px-6">
+            <PillTabs
+              options={TABS.map((entry) => ({ ...entry, label: t(entry.key) }))}
+              value={tab}
+              onChange={handleTabChange}
+              ariaLabel={t("profile.sectionAria")}
+            />
+          </div>
         </div>
 
         {tab === "overview" && (
@@ -91,6 +119,8 @@ export function PoliticianProfileSheet({ open, onClose, subject }) {
             onOpenAssets={() => setAssetsOpen(true)}
           />
         )}
+
+        <ReplayTutorialRow onClose={onClose} />
       </BottomSheet>
 
       <AssetBreakdownSheet
@@ -98,6 +128,54 @@ export function PoliticianProfileSheet({ open, onClose, subject }) {
         onClose={() => setAssetsOpen(false)}
         subject={subject}
       />
+
+      {/* A sibling for the same reason the breakdown sheet is one: this sheet's
+          content wrapper keeps a transform at rest, which would otherwise make
+          it the containing block for a `fixed` descendant. */}
+      <PerformancePreviewSheet
+        open={performanceOpen}
+        onClose={() => setPerformanceOpen(false)}
+      />
     </>
+  );
+}
+
+/**
+ * The way back into the first-run tutorial, below the tab content so it is the
+ * last thing in the sheet on every tab rather than an item competing with the
+ * profile itself.
+ *
+ * Closing first and starting after a beat is deliberate: the tour dims the
+ * whole screen, and starting it while the sheet is still sliding out would
+ * spotlight a nav bar with a panel sliding across it. The delay is the sheet's
+ * own exit (220ms) plus a frame.
+ */
+function ReplayTutorialRow({ onClose }) {
+  const { t } = useTranslation();
+  const { startTour } = useOnboarding();
+
+  return (
+    <div className="mt-8 border-t border-rule pt-4">
+      <button
+        type="button"
+        onClick={() => {
+          onClose();
+          setTimeout(startTour, 260);
+        }}
+        className="flex w-full items-center gap-3 rounded-control bg-surface-2 px-4 py-3 text-left ring-1 ring-ink/5 transition-colors hover:bg-brand-wash/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      >
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-wash text-brand-strong">
+          <Sparkles className="size-4" strokeWidth={2.25} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-sm font-bold text-ink">
+            {t("onboarding.replay")}
+          </span>
+          <span className="block text-xs font-medium text-muted">
+            {t("onboarding.replayHint")}
+          </span>
+        </span>
+      </button>
+    </div>
   );
 }

@@ -325,6 +325,20 @@ button:not(:disabled),
   animation: live-core 2.4s ease-in-out infinite;
 }
 
+/*
+ * A row that scrolls sideways without advertising it — the profile sheet's tab
+ * strip, which outgrew a phone's width once Performance joined it. The pills
+ * are the affordance; a scrollbar under them would only cut into the sheet.
+ */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* The sweep used by skeleton placeholders while data loads. */
 @keyframes skeleton-sweep {
   100% {

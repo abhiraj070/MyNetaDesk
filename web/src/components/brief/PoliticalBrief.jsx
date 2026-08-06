@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ArrowLeft, RefreshCw } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -44,9 +45,16 @@ export function PoliticalBrief() {
           >
             <ArrowLeft className="size-[19px]" strokeWidth={2} />
           </button>
-          <p className="font-display text-[17px] leading-none font-bold tracking-tight text-brief-ink">
+          {/* The wordmark is the way back to the app itself — a real link to
+              `/`, not a second copy of the arrow beside it. The arrow retraces
+              the reader's history (which may be a story they opened from
+              somewhere else); this always lands on the main page. */}
+          <Link
+            href="/"
+            className="rounded-full font-display text-[17px] leading-none font-bold tracking-tight text-brief-ink transition-opacity hover:opacity-65 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brief-accent active:opacity-50"
+          >
             {t("app.name")}
-          </p>
+          </Link>
         </div>
 
         <div className="pt-6 pb-5">
