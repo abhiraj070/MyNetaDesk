@@ -32,18 +32,23 @@ async def fetch_news():
         "sortby": "publishedAt",
     }
     async with httpx.AsyncClient(timeout=30) as client:
-        response1, response2 = await asyncio.gather(client.get(url, params=params1), client.get(url, params=params2))
-        response1.raise_for_status()
-        response2.raise_for_status()
-        data1 = response1.json()
-        data2 = response2.json()
+        response1 = await client.get(url, params=params1)
+        await asyncio.sleep(1.1)
+
+        response2 = await client.get(url, params=params2)
+        await asyncio.sleep(1.1)
+
         params1["page"] = 2
+        response3 = await client.get(url, params=params1)
+        await asyncio.sleep(1.1)
+
         params2["page"] = 2
-        response3, response4 = await asyncio.gather(client.get(url, params=params1), client.get(url, params=params2))
-        response3.raise_for_status()
-        response4.raise_for_status()
-        data3 = response3.json()
-        data4 = response4.json()
+        response4 = await client.get(url, params=params2)
+
+        data1 = json.loads(response1.text)
+        data2 = json.loads(response2.text)
+        data3 = json.loads(response3.text)
+        data4 = json.loads(response4.text)
         english_news = data1["articles"] + data3["articles"]
         hindi_news = data2["articles"] + data4["articles"]
         await redis_client.set("english_news", json.dumps(english_news))
