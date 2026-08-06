@@ -1,14 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  ChevronRight,
-  Compass,
-  Landmark,
-  Scale,
-  Sparkles,
-  Wallet,
-} from "lucide-react";
+import { ChevronRight, Scale, Sparkles, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "../ui/Badge";
@@ -17,8 +10,6 @@ import { useTranslation } from "@/lib/i18n";
 import { SPRING_POP } from "@/lib/motion";
 
 const METRIC_ICON = {
-  party: Landmark,
-  place: Compass,
   verdict: Scale,
   assets: Wallet,
 };
@@ -29,6 +20,11 @@ const METRIC_ICON = {
  * to live here were cut; those tabs are one tap away on their own, and this
  * tab is meant to be readable in a glance, not a table of contents for the
  * other two.
+ *
+ * The metric grid is down to the two cards that say something the hero does
+ * not (see `atAGlanceMetrics`), which is what buys the extra air between the
+ * sections here: fewer boxes, further apart, rather than the same density
+ * with a hole in it.
  */
 export function ProfileOverviewTab({ subject, onOpenAssets }) {
   const { t } = useTranslation();
@@ -36,12 +32,15 @@ export function ProfileOverviewTab({ subject, onOpenAssets }) {
   const insights = quickInsights(subject, t);
 
   return (
-    <div className="space-y-6 pb-6">
+    <div className="space-y-7 pb-7">
       <Hero subject={subject} />
 
       <section>
         <h3 className="eyebrow">{t("profile.atAGlance")}</h3>
-        <div className="mt-2.5 grid grid-cols-2 gap-3">
+        {/* Two cards, one row. `items-stretch` keeps them the same height
+            whichever one is taller — the verdict card carries a bar and the
+            assets card a tap hint, so they rarely agree on their own. */}
+        <div className="mt-3 grid grid-cols-2 items-stretch gap-3.5">
           {metrics.map((metric) => (
             <MetricCard
               key={metric.key}
@@ -58,11 +57,11 @@ export function ProfileOverviewTab({ subject, onOpenAssets }) {
             <Sparkles className="size-4 text-brand-strong" strokeWidth={2.25} />
             <h3 className="eyebrow">{t("profile.quickInsights")}</h3>
           </div>
-          <ul className="mt-2.5 space-y-2">
+          <ul className="mt-3 space-y-2.5">
             {insights.map((line) => (
               <li
                 key={line}
-                className="rounded-card bg-surface-2 px-4 py-3 text-sm leading-relaxed font-medium text-ink ring-1 ring-ink/5"
+                className="rounded-card bg-surface-2 px-4 py-3.5 text-sm leading-relaxed font-medium text-ink ring-1 ring-ink/5"
               >
                 {line}
               </li>
@@ -132,7 +131,7 @@ function Avatar({ src, name }) {
 }
 
 function MetricCard({ metric, onClick }) {
-  const Icon = METRIC_ICON[metric.key] ?? Landmark;
+  const Icon = METRIC_ICON[metric.key] ?? Scale;
   // Both branches are motion components (never a plain string tag) so
   // `whileHover`/`whileTap` are always valid props, even on the
   // non-interactive cards where they're passed as `undefined`.
@@ -145,7 +144,7 @@ function MetricCard({ metric, onClick }) {
       whileTap={onClick ? { scale: 0.97 } : undefined}
       whileHover={onClick ? { y: -2 } : undefined}
       transition={SPRING_POP}
-      className={`flex flex-col gap-2 rounded-card bg-surface p-3.5 text-left shadow-card ring-1 ring-ink/5 ${
+      className={`flex flex-col gap-2.5 rounded-card bg-surface p-4 text-left shadow-card ring-1 ring-ink/5 ${
         onClick ? "transition-shadow hover:shadow-lift" : ""
       }`}
     >
@@ -156,7 +155,11 @@ function MetricCard({ metric, onClick }) {
         <span className="block text-[11px] leading-tight font-semibold text-muted">
           {metric.label}
         </span>
-        <span className="mt-0.5 block truncate font-display text-sm font-bold text-ink">
+        {/* Wraps rather than truncates. The clip was here to protect the card
+            from a full party name ("Bharatiya Janata Party"); with that metric
+            gone, the only values left are short enough to wrap to a second
+            line, and clipping them just produced "Tap to view break…". */}
+        <span className="mt-0.5 block font-display text-sm leading-snug font-bold text-balance text-ink">
           {metric.value}
         </span>
       </span>

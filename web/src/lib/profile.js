@@ -28,28 +28,22 @@ export function placeLabelKeyOf(subject) {
 }
 
 /**
- * The real, always-on-record metrics for the "At a Glance" grid, plus a
- * "Declared Assets" card — deliberately not the Assets/Liabilities/Criminal
- * Cases/Experience set the original design brief sketched, since none of
- * that exists in the data yet (see module docstring). The assets card is
- * always tappable: it opens the full breakdown sheet, which is honest about
+ * The two metrics worth a card of their own: what the public has said, and
+ * what they declared they own. Deliberately not the Assets/Liabilities/
+ * Criminal Cases/Experience set the original design brief sketched, since
+ * none of that exists in the data yet (see module docstring). The assets card
+ * is always tappable: it opens the full breakdown sheet, which is honest about
  * there being no affidavit on file rather than hiding the interaction.
+ *
+ * Party and State/Portfolio used to sit here too and were cut — both are
+ * already on the hero directly above this grid (the party as its badge, the
+ * state or portfolio inside the designation line), so the cards restated what
+ * the reader had just read and cost a whole row to do it.
  */
 export function atAGlanceMetrics(subject, t) {
   if (!subject) return [];
-  const place = placeOf(subject);
 
   return [
-    {
-      key: "party",
-      label: t("profile.currentParty"),
-      value: subject.party || t("profile.notOnRecord"),
-    },
-    {
-      key: "place",
-      label: t(placeLabelKeyOf(subject)),
-      value: place || t("profile.notOnRecord"),
-    },
     {
       key: "verdict",
       label: t("profile.publicVerdict"),
