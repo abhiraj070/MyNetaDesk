@@ -27,6 +27,7 @@ cm= Table("chief_ministers", metadata, autoload_with= engine)
 politician= Table("politicians", metadata, autoload_with= engine)
 wealth= Table("wealth_declarations", metadata, autoload_with= engine)
 milestones= Table("political_milestones", metadata, autoload_with= engine)
+count= Table("Count", metadata, autoload_with= engine)
 
 HINDI = "hi"
 
@@ -73,6 +74,9 @@ def get_location(request: LocationRequest, db: Session= Depends(get_db)):
         )
 
         final_mp= db.execute(stmt).mappings().first()
+        stmt2= (update(count).where(count.c.id==123).values(cnt= count.c["cnt"]+1))
+        db.execute(stmt2)
+        db.commit()
         return {"mp": final_mp}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
