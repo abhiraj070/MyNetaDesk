@@ -179,6 +179,9 @@ export function buildMpSubject(mp, { isHome = true, t } = {}) {
   const place = titleCase(mp.constituency);
   return {
     tier: "mp",
+    // The MP's own primary key. Their political journey is fetched by it, so a
+    // subject built without it would render an empty timeline.
+    id: mp.id ?? null,
     name: mp.name,
     designation: t ? t("card.mpOf", { place }) : `Member of Parliament, ${place}`,
     party: mp.party,

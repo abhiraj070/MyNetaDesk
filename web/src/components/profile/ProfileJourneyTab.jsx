@@ -1,11 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronRight, MapPin, Sparkle } from "lucide-react";
+import { ChevronDown, ChevronRight, MapPin, Sparkle, Vote } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "../ui/Badge";
-import { InlineComingSoon } from "../comingsoon/ComingSoon";
 import { useTimeline } from "@/hooks/useTimeline";
 import { toFriendlyError } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n";
@@ -22,30 +21,9 @@ import { placeOf } from "@/lib/profile";
  */
 export function ProfileJourneyTab({ subject, onOpenAssets }) {
   const { t } = useTranslation();
-  /*
-   * No timeline source covers MPs yet: `politicians` — the table `/get-timeline`
-   * reads — holds only Chief Ministers and Union Ministers, so an MP request
-   * could only ever come back empty. The tab exists and the component is the
-   * same one; it simply says so, and the request is not made rather than being
-   * fired to fetch a guaranteed nothing.
-   */
-  const isAwaitingSource = subject?.tier === "mp";
-  const { entries, isPending, isError, error } = useTimeline({
-    subject,
-    enabled: !isAwaitingSource,
-  });
-
-  if (isAwaitingSource) {
-    return (
-      <div className="pb-6">
-        <InlineComingSoon
-          icon="🗺️"
-          title={t("comingSoon.journey.title")}
-          body={t("comingSoon.journey.body")}
-        />
-      </div>
-    );
-  }
+  // MPs read from their own table via their own endpoint; `useTimeline` picks
+  // the right one. Everything below is shared.
+  const { entries, isPending, isError, error } = useTimeline({ subject });
 
   // The Declared Assets sheet always shows the LATEST declaration, so exactly
   // one card may link to it: the newest one carrying a figure. `isCurrent`
@@ -250,8 +228,23 @@ function TimelineCard({ entry, subject, onOpenAssets }) {
               transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
               className="overflow-hidden"
             >
-              <div className="border-t border-rule px-4 py-3.5 text-xs leading-relaxed font-medium text-muted">
-                {period ?? t("profile.noFinancials")}
+              <div className="space-y-1.5 border-t border-rule px-4 py-3.5 text-xs leading-relaxed font-medium text-muted">
+                <p>{period ?? t("profile.noFinancials")}</p>
+                {/* How the seat was won, where the record says so. Absent on
+                    an appointment, and on every milestone from the older
+                    `politicians` source, which stores neither. */}
+                {entry.electionType && (
+                  <p className="flex items-center gap-1.5">
+                    <Vote className="size-3 shrink-0" strokeWidth={2.5} />
+                    {entry.electionType}
+                  </p>
+                )}
+                {entry.entryMode && (
+                  <p className="flex items-center gap-1.5">
+                    <Sparkle className="size-3 shrink-0" strokeWidth={2.5} />
+                    {entry.entryMode}
+                  </p>
+                )}
               </div>
             </motion.div>
           )}

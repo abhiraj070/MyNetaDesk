@@ -3,7 +3,8 @@ from urllib import request, response
 from app.main import app
 from app.schema import (LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest,
                         GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest, TweetRequest,
-                        FeedbackRequest, GetAssetsRequest, UpdateMpsRequest)
+                        FeedbackRequest, GetAssetsRequest, UpdateMpsRequest,
+                        GetMpTimelineRequest)
 from app.db.connect import get_db, engine
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, Query
@@ -23,6 +24,7 @@ mp= Table("mps", metadata, autoload_with= engine)
 pc= Table("parliamentary_constituencies", metadata, autoload_with= engine)
 manifesto= Table("party_manifesto_points", metadata, autoload_with=engine)
 mp_hindi= Table("mps_hindi", metadata, autoload_with= engine)
+mp_milestone= Table("mp_political_milestone", metadata, autoload_with= engine)
 minister= Table("ministers", metadata, autoload_with= engine)
 cm= Table("chief_ministers", metadata, autoload_with= engine)
 politician= Table("politicians", metadata, autoload_with= engine)
@@ -405,6 +407,24 @@ def get_mp_by_name(request: GetMpRequest, db: Session= Depends(get_db)):
 
         all_mps= db.execute(many.order_by(mp.c.name)).mappings().all()
         return {"mps": all_mps}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+@app.post("/get-mp-timeline")
+def get_mp_timeline(request: GetMpTimelineRequest, db: Session= Depends(get_db)):
+    try:
+        stmt= (select(mp_milestone.c.id, mp_milestone.c.start_date, mp_milestone.c.end_date,
+                      mp_milestone.c.position_title, mp_milestone.c.position_rank,
+                      mp_milestone.c.election_type, mp_milestone.c.entry_mode,
+                      mp_milestone.c.is_current, mp_milestone.c.source)
+                .where(mp_milestone.c.mp_id==request.id)
+                .order_by(mp_milestone.c.position_rank.asc(),
+                          mp_milestone.c.start_date.desc().nullslast()))
+        timeline= db.execute(stmt).mappings().all()
+        return {"timeline": timeline}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:

@@ -40,6 +40,10 @@ class GetMpRequest(BaseModel):
     lang: str = "en"
     constituency_key: Optional[str] = None
 
+class GetMpTimelineRequest(BaseModel):
+    id: int
+    lang: str = "en"
+
 class GetCmRequest(BaseModel):
     state_key: Optional[str] = None
     lang: str = "en"

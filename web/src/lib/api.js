@@ -491,6 +491,39 @@ export async function fetchTimeline(subject) {
 }
 
 /**
+ * `POST /get-mp-timeline` — one MP's political journey, by their `mps.id`.
+ *
+ * Normalised into the exact shape `fetchTimeline` returns, so `ProfileJourneyTab`
+ * renders an MP's journey with the same component, the same timeline and the
+ * same cards it already draws for Chief Ministers and Union Ministers.
+ *
+ * Two fields are legitimately absent for an MP and stay null rather than being
+ * faked: `party` (the milestone table deliberately holds no copy of the MP's
+ * details) and `totalAssets` (affidavit data, which belongs to the assets
+ * source, not to a career milestone).
+ */
+export async function fetchMpTimeline(id) {
+  const { data } = await api.post("/get-mp-timeline", { id });
+  const rows = Array.isArray(data?.timeline) ? data.timeline : [];
+
+  return rows.map((row) => ({
+    year: row.start_date ? Number(String(row.start_date).slice(0, 4)) : null,
+    startDate: row.start_date ?? null,
+    endDate: row.end_date ?? null,
+    role: row.position_title ?? null,
+    rank: row.position_rank ?? null,
+    electionType: row.election_type ?? null,
+    entryMode: row.entry_mode ?? null,
+    isCurrent: Boolean(row.is_current),
+    // The table stores one verified URL per milestone; the timeline's source
+    // note takes a list.
+    sources: row.source ? [{ url: row.source }] : [],
+    party: null,
+    totalAssets: null,
+  }));
+}
+
+/**
  * `POST /get-assets` — every declared-wealth record on file, as
  * `{ top_assets: [...] }`. The Declared Assets sheet shows one breakdown, so
  * the most recent record wins; the rest are returned for callers that want the

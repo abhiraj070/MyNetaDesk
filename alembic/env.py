@@ -11,6 +11,7 @@ from app.db.model import daily_counts  # noqa: F401
 from app.db.model import feedback  # noqa: F401
 from app.db.model import journey  # noqa: F401
 from app.db.model import localisation  # noqa: F401
+from app.db.model import mp_journey  # noqa: F401
 
 # Alembic Config object — access to values in alembic.ini.
 config = context.config
@@ -37,6 +38,23 @@ def include_name(name, type_, parent_names):
     return True
 
 
+def include_object(object_, name, type_, reflected, compare_to):
+    """Leave hand-declared foreign keys alone.
+
+    A model here cannot declare an FK onto a *reflected* table (`mps`) — there
+    is no table object on this Base to resolve the reference against — so those
+    constraints are written directly in their migrations instead. Autogenerate
+    then sees an FK in the database with no counterpart in the models and
+    proposes dropping it, on every future run.
+
+    Foreign keys are therefore excluded from the comparison altogether: they are
+    declared in migrations by hand, which is where they are maintained.
+    """
+    if type_ == "foreign_key_constraint":
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     """Run migrations without a DB connection (emits SQL)."""
     context.configure(
@@ -45,6 +63,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         include_name=include_name,
+        include_object=include_object,
         compare_type=True,
     )
 
@@ -64,6 +83,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             include_name=include_name,
+            include_object=include_object,
             compare_type=True,
         )
 
