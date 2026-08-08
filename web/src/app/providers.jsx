@@ -7,6 +7,7 @@ import { useState } from "react";
 import { LanguageProvider } from "@/lib/i18n";
 import { LocationProvider } from "@/lib/location";
 import { OnboardingProvider } from "@/lib/onboarding";
+import { SubjectProvider } from "@/lib/subject";
 
 export function Providers({ children }) {
   // Created in state so the client isn't shared between requests on the server
@@ -42,13 +43,18 @@ export function Providers({ children }) {
         <LanguageProvider>
           <LocationProvider>
             {/*
-             * The onboarding layer sits alongside them for the same reason:
-             * "has this user seen the tutorial" and the registry of
-             * highlightable elements both have to outlive a navigation, so
-             * replaying the tour from the Info sheet finds its targets
-             * whichever route the user arrived on.
+             * `SubjectProvider` joins them for the same reason once more: the
+             * information page and the game route are two views of one subject,
+             * and the selection has to survive the navigation between them.
+             *
+             * The onboarding layer sits here too — "has this user seen the
+             * tutorial" and the registry of highlightable elements both have to
+             * outlive a navigation, so replaying the tour finds its targets
+             * whichever route the reader arrived on.
              */}
-            <OnboardingProvider>{children}</OnboardingProvider>
+            <SubjectProvider>
+              <OnboardingProvider>{children}</OnboardingProvider>
+            </SubjectProvider>
           </LocationProvider>
         </LanguageProvider>
       </MotionConfig>

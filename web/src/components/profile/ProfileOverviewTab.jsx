@@ -2,9 +2,8 @@
 
 import { motion } from "framer-motion";
 import { ChevronRight, Scale, Sparkles, Wallet } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { Badge } from "../ui/Badge";
 import { atAGlanceMetrics, quickInsights } from "@/lib/profile";
 import { useTranslation } from "@/lib/i18n";
 import { SPRING_POP } from "@/lib/motion";
@@ -15,26 +14,35 @@ const METRIC_ICON = {
 };
 
 /**
- * Overview: just the fast-read stack — hero, at-a-glance metrics, quick
- * insights. The Political Journey and Manifesto preview sections that used
- * to live here were cut; those tabs are one tap away on their own, and this
- * tab is meant to be readable in a glance, not a table of contents for the
- * other two.
+ * Overview: just the fast-read stack — at-a-glance metrics and quick insights.
+ * The Political Journey and Manifesto preview sections that used to live here
+ * were cut; those tabs are one tap away on their own, and this tab is meant to
+ * be readable in a glance, not a table of contents for the other two.
  *
- * The metric grid is down to the two cards that say something the hero does
- * not (see `atAGlanceMetrics`), which is what buys the extra air between the
- * sections here: fewer boxes, further apart, rather than the same density
- * with a hole in it.
+ * The identity card that used to open this tab now sits above the tab row (see
+ * `ProfileIdentityCard`) — it names the person all four tabs are about, so it
+ * belongs to the page rather than to Overview.
+ *
+ * The metric grid is down to the two cards that say something the identity
+ * card does not (see `atAGlanceMetrics`), which is what buys the extra air
+ * between the sections here: fewer boxes, further apart, rather than the same
+ * density with a hole in it.
  */
 export function ProfileOverviewTab({ subject, onOpenAssets }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const metrics = atAGlanceMetrics(subject, t);
   const insights = quickInsights(subject, t);
 
+  // Public Verdict is the tally this person's slaps and roses have produced, so
+  // pressing it goes to the place that produces them.
+  const openMetric = (metric) => {
+    if (metric.key === "verdict") return () => router.push("/game");
+    return metric.tappable ? onOpenAssets : undefined;
+  };
+
   return (
     <div className="space-y-7 pb-7">
-      <Hero subject={subject} />
-
       <section>
         <h3 className="eyebrow">{t("profile.atAGlance")}</h3>
         {/* Two cards, one row. `items-stretch` keeps them the same height
@@ -45,7 +53,7 @@ export function ProfileOverviewTab({ subject, onOpenAssets }) {
             <MetricCard
               key={metric.key}
               metric={metric}
-              onClick={metric.tappable ? onOpenAssets : undefined}
+              onClick={openMetric(metric)}
             />
           ))}
         </div>
@@ -68,63 +76,6 @@ export function ProfileOverviewTab({ subject, onOpenAssets }) {
             ))}
           </ul>
         </section>
-      )}
-    </div>
-  );
-}
-
-function Hero({ subject }) {
-  return (
-    <div className="flex items-center gap-4 rounded-card bg-surface-2 p-4 ring-1 ring-ink/5">
-      <Avatar src={subject.photo_url} name={subject.name} />
-      <div className="min-w-0 flex-1">
-        <h2 className="truncate font-display text-lg leading-tight font-bold text-ink">
-          {subject.name}
-        </h2>
-        {subject.designation && (
-          <p className="mt-0.5 truncate text-sm font-semibold text-muted">
-            {subject.designation}
-          </p>
-        )}
-        {subject.party && (
-          <Badge tone="brand" size="sm" className="mt-1.5">
-            {subject.party}
-          </Badge>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Avatar({ src, name }) {
-  const [failed, setFailed] = useState(false);
-  const showImage = Boolean(src) && !failed;
-  const monogram = String(name ?? "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-
-  return (
-    <div className="size-16 shrink-0 overflow-hidden rounded-2xl bg-surface ring-1 ring-ink/5">
-      {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
-          className="size-full object-cover object-top"
-        />
-      ) : (
-        <span className="flex size-full items-center justify-center font-display text-lg font-bold text-faint">
-          {monogram || "?"}
-        </span>
       )}
     </div>
   );

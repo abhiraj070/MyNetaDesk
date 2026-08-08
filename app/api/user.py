@@ -192,7 +192,7 @@ def update_ministry_count(request: UpdateMinistryRequest, db: Session= Depends(g
         ministry_name= request.ministry_name
         if field not in ("slap_count", "rose_count"):
             raise HTTPException(status_code=400, detail=f"Cannot update {field} field")
-        if field=="rose_count": 
+        if field=="rose_count":
             today_count="rose_count_today" 
         else: 
             today_count= "slap_count_today" 
@@ -206,13 +206,22 @@ def update_ministry_count(request: UpdateMinistryRequest, db: Session= Depends(g
         )
 
         result= db.execute(stmt)
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=404,
+                detail="Minister not found"
+            )
         db.commit()
         return {"rows_updated": result.rowcount}
     except HTTPException:
+        db.rollback()
         raise
     except SQLAlchemyError as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 

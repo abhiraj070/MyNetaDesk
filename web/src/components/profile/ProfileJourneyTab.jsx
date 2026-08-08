@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, MapPin, Sparkle } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "../ui/Badge";
+import { InlineComingSoon } from "../comingsoon/ComingSoon";
 import { useTimeline } from "@/hooks/useTimeline";
 import { toFriendlyError } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n";
@@ -21,7 +22,30 @@ import { placeOf } from "@/lib/profile";
  */
 export function ProfileJourneyTab({ subject, onOpenAssets }) {
   const { t } = useTranslation();
-  const { entries, isPending, isError, error } = useTimeline({ subject });
+  /*
+   * No timeline source covers MPs yet: `politicians` — the table `/get-timeline`
+   * reads — holds only Chief Ministers and Union Ministers, so an MP request
+   * could only ever come back empty. The tab exists and the component is the
+   * same one; it simply says so, and the request is not made rather than being
+   * fired to fetch a guaranteed nothing.
+   */
+  const isAwaitingSource = subject?.tier === "mp";
+  const { entries, isPending, isError, error } = useTimeline({
+    subject,
+    enabled: !isAwaitingSource,
+  });
+
+  if (isAwaitingSource) {
+    return (
+      <div className="pb-6">
+        <InlineComingSoon
+          icon="🗺️"
+          title={t("comingSoon.journey.title")}
+          body={t("comingSoon.journey.body")}
+        />
+      </div>
+    );
+  }
 
   // The Declared Assets sheet always shows the LATEST declaration, so exactly
   // one card may link to it: the newest one carrying a figure. `isCurrent`

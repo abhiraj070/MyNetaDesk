@@ -5,39 +5,50 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, Newspaper } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BottomActions } from "@/components/BottomActions";
+import { PillTabs } from "@/components/Leaderboard";
 import { HOME_TOUR_STEPS } from "@/components/onboarding/homeTour";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { ProfileIdentityCard } from "@/components/profile/ProfileIdentityCard";
+import { ProfilePanel } from "@/components/profile/ProfilePanel";
 import { LiveDot } from "@/components/brief/LiveDot";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { FeedbackSuccess } from "@/components/feedback/FeedbackSuccess";
-import { PoliticianProfileSheet } from "@/components/profile/PoliticianProfileSheet";
 import { Landing } from "@/components/Landing";
 import { LanguageModal } from "@/components/LanguageModal";
 import { Sidebar } from "@/components/Sidebar";
 import { LeaderboardSheet } from "@/components/LeaderboardSheet";
-import { RepresentativeCard } from "@/components/RepresentativeCard";
 import { SearchSheet } from "@/components/SearchSheet";
-import { ErrorScreen, LocatingScreen } from "@/components/StatusScreens";
-import { TodaysHighlight } from "@/components/TodaysHighlight";
+import { ErrorScreen } from "@/components/StatusScreens";
+import { InfoPageSkeleton } from "@/components/skeletons/InfoPageSkeleton";
 import { XDiscussionSheet } from "@/components/x/XDiscussionSheet";
 import { useMinistries } from "@/hooks/useMinistries";
+import { useTopperSelection } from "@/hooks/useTopperSelection";
 import { useScrolled } from "@/hooks/useScrolled";
-import {
-  fetchCmByStateKey,
-  fetchCmLocation,
-  fetchMinisterByName,
-  toFriendlyError,
-} from "@/lib/api";
+import { fetchCmByStateKey, toFriendlyError } from "@/lib/api";
 import { GeolocationError, requestPosition } from "@/lib/geolocation";
 import { useLocationState } from "@/lib/location";
-import { rankOf } from "@/lib/ministries";
 import { useTranslation } from "@/lib/i18n";
 import { rise, SPRING_POP } from "@/lib/motion";
 import { useOnboarding, useOnboardingTarget } from "@/lib/onboarding";
+import { buildShareMessage, buildShareUrl } from "@/lib/share";
+import {
+  subjectKeyOf,
+  useResolvedSubject,
+  useSubjectSelection,
+} from "@/lib/subject";
 import { NAV_CONTROL, NAV_MENU_BUTTON, NAV_SURFACE } from "@/lib/navStyles";
+
+/**
+ * The two representatives a reader's own coordinates resolve to. MLAs are
+ * deliberately absent — state assembly members are not part of this product.
+ */
+const HOME_TIERS = [
+  { value: "cm", key: "card.yourCm" },
+  { value: "mp", key: "card.yourMp" },
+];
 
 const RANK_ORDER = {
   "Prime Minister": 0,
@@ -95,31 +106,21 @@ export function Home() {
   const coords = storedCoords ?? (deepLinkDropped ? null : deepLink.coords);
   const [geoError, setGeoError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [openSheet, setOpenSheet] = useState(null); // "info" | "leaderboard" | "search" | "x" | null
-  // A search-picked result, either tier — `{ tier: "cm" | "minister", data }`.
-  // Kept as one variable (not two) so a cm pick and a minister pick can never
-  // both be "selected" at once.
-  const [selectedSearchResult, setSelectedSearchResult] = useState(null);
-  // Set when a leaderboard row is tapped — a fully-fetched subject that
-  // overrides whatever else is on screen until the user backs out of it.
-  const [leaderboardSubject, setLeaderboardSubject] = useState(null);
-  const [pendingTopperKey, setPendingTopperKey] = useState(null);
-  // The last verdict cast, tagged with the subject it was cast on:
-  // `{ key, choice }`. Share now lives in the bottom bar rather than inside
-  // the card, so it no longer remounts when the subject changes — carrying the
-  // key is what stops the share text from crediting a verdict cast on someone
-  // else (and stops Share keeping its "you just voted" highlight).
-  const [lastVote, setLastVote] = useState(null);
+  const [openSheet, setOpenSheet] = useState(null); // "leaderboard" | "search" | "x" | null
+  // Who the app is talking about. Held above the router (see `lib/subject`) so
+  // a search or a leaderboard pick is still the subject after a trip to the
+  // game route and back.
+  const {
+    selectedSearchResult,
+    setSelectedSearchResult,
+    leaderboardSubject,
+    setLeaderboardSubject,
+    lastVote,
+    setLastVote,
+    homeTier,
+    setHomeTier,
+  } = useSubjectSelection();
   const [toast, setToast] = useState(null);
-  const [pendingMinisterName, setPendingMinisterName] = useState(
-    deepLink.ministerName,
-  );
-  // A `?share=cm&state=` deep link with no coordinates — seed that exact CM by
-  // key. Skipped when coords are present, since the location query already
-  // resolves the same card.
-  const [pendingCmState, setPendingCmState] = useState(
-    deepLink.coords ? null : deepLink.cmStateKey,
-  );
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Re-opening the picker from the sidebar is dismissible; the first-run
@@ -132,45 +133,55 @@ export function Home() {
   // the user ever opens Search themselves.
   const { entries: ministryEntries } = useMinistries();
 
-  // Once ministries load, match a pending deep-linked minister name to an
-  // entry and swap the card. Runs during render — React batches the paired
-  // setStates into the same commit.
-  if (pendingMinisterName && ministryEntries.length > 0) {
-    const target = pendingMinisterName.toLowerCase();
-    const entry = ministryEntries.find(
-      (e) => e.minister.minister_name?.toLowerCase() === target,
-    );
-    if (entry) {
-      setSelectedSearchResult({ tier: "minister", data: entry });
-      setPendingMinisterName(null);
-    } else {
-      setPendingMinisterName(null);
-    }
-  }
+  /*
+   * Deep links resolve by derivation, not by seeding.
+   *
+   * `?share=minister&name=` and `?share=cm&state=` used to be copied into the
+   * selection as soon as they resolved — during render while that state was
+   * local, which React allows, and which stopped being allowed the moment the
+   * selection moved into `SubjectProvider`. An effect would work but is the
+   * pattern the "you might not need an effect" rule exists to catch: the link
+   * is already a description of a subject, so it can simply *be* one, computed
+   * from what the URL says and what has loaded so far.
+   *
+   * Nothing writes state on this path now, which also means there is no window
+   * in which the seed has landed but the render hasn't caught up.
+   */
+  const cmStateKey = deepLinkDropped ? null : deepLink.cmStateKey;
+  const linkedMinisterName = deepLinkDropped ? null : deepLink.ministerName;
 
-  // Resolves a `?share=cm&state=` deep link (same fetch the leaderboard uses to
-  // open a CM), then swaps that CM in the same render-time pattern as above.
   const { data: seededCm } = useQuery({
-    queryKey: ["cm-by-state", language, pendingCmState],
-    queryFn: () => fetchCmByStateKey(pendingCmState),
-    enabled: Boolean(pendingCmState),
+    queryKey: ["cm-by-state", language, cmStateKey],
+    queryFn: () => fetchCmByStateKey(cmStateKey),
+    enabled: Boolean(cmStateKey),
   });
-  if (pendingCmState && seededCm) {
-    setSelectedSearchResult({ tier: "cm", data: seededCm });
-    setPendingCmState(null);
-  }
 
+  const deepLinkSelection = useMemo(() => {
+    if (linkedMinisterName) {
+      const target = linkedMinisterName.toLowerCase();
+      const entry = ministryEntries.find(
+        (e) => e.minister.minister_name?.toLowerCase() === target,
+      );
+      // A name that matches nothing resolves to nothing, and the page falls
+      // through to the reader's own CM rather than waiting forever.
+      return entry ? { tier: "minister", data: entry } : null;
+    }
+    if (cmStateKey && seededCm) return { tier: "cm", data: seededCm };
+    return null;
+  }, [linkedMinisterName, ministryEntries, cmStateKey, seededCm]);
+
+  // The same hook the game route calls, so both views of a subject agree
+  // without either of them re-deriving it. `selection` comes back out because
+  // the Search sheet highlights whoever is currently picked — including one
+  // arrived at by link.
   const {
-    data,
+    subject,
+    selection,
     isPending: isLoadingSeats,
     isError,
     error,
     refetch,
-  } = useQuery({
-    queryKey: ["cm-location", language, coords?.latitude, coords?.longitude],
-    queryFn: () => fetchCmLocation(coords),
-    enabled: coords !== null,
-  });
+  } = useResolvedSubject(coords, { fallbackSelection: deepLinkSelection });
 
   const handleAllowLocation = useCallback(async () => {
     setGeoError(null);
@@ -186,12 +197,11 @@ export function Home() {
     // it is stable — declared only to satisfy the exhaustive-deps rule.
   }, [setCoords]);
 
-  const subject =
-    leaderboardSubject ?? buildSubject(selectedSearchResult, data?.cm);
+  // True while the page is showing one of the reader's own representatives —
+  // nothing searched, nothing tapped in from the leaderboard, no `?share=` link.
+  const isHomeSubject = !leaderboardSubject && !selection;
 
-  const subjectKey = subject
-    ? `${subject.tier}:${subject.tier === "minister" ? subject.ministry + "|" + subject.name : subject.state_key + "|" + subject.name}`
-    : "none";
+  const subjectKey = subjectKeyOf(subject);
 
   const lastChoice = lastVote?.key === subjectKey ? lastVote.choice : null;
 
@@ -202,73 +212,45 @@ export function Home() {
     setTimeout(() => setToast(null), 2200);
   }, []);
 
-  const handleSelectCm = useCallback((cm) => {
-    setLeaderboardSubject(null);
-    setSelectedSearchResult(cm ? { tier: "cm", data: cm } : null);
-  }, []);
-
-  const handleSelectMinister = useCallback((entry) => {
-    setLeaderboardSubject(null);
-    setSelectedSearchResult(entry ? { tier: "minister", data: entry } : null);
-  }, []);
-
-  /**
-   * Opens a leaderboard row as a full profile, reusing the same
-   * `RepresentativeCard` the home CM/minister uses — no separate modal or
-   * simplified view. Only one lookup runs at a time; a second tap while one
-   * is in flight is a no-op rather than racing two fetches.
-   */
-  const handleSelectTopper = useCallback(
-    async (tier, topper) => {
-      if (pendingTopperKey) return;
-
-      const toppedName = tier === "minister" ? topper.minister_name : topper.name;
-      const key = `${tier}:${toppedName}`;
-      setPendingTopperKey(key);
-
-      try {
-        if (tier === "cm") {
-          const details = await fetchCmByStateKey(topper.state_key);
-          if (!details) throw new Error("CM not found");
-          setLeaderboardSubject({ tier: "cm", ...details, isHome: false });
-        } else {
-          const details = await fetchMinisterByName({
-            name: topper.minister_name,
-            ministry: topper.ministry,
-          });
-          if (!details) throw new Error("Union Minister not found");
-          const firstFragment = String(details.ministry ?? "")
-            .split(";")[0]
-            .trim();
-          setLeaderboardSubject({
-            tier: "minister",
-            name: details.minister_name,
-            minister_name: details.minister_name,
-            party: details.party,
-            photo_url: details.photo_url,
-            slap_count: details.slap_count,
-            rose_count: details.rose_count,
-            points: details.manifesto_points,
-            manifesto_points: details.manifesto_points,
-            ministry: details.ministry,
-            portfolio: firstFragment,
-            rank_title: rankOf(firstFragment),
-            designation: firstFragment,
-          });
-        }
-        setOpenSheet(null);
-      } catch {
-        showToast(t("common.profileFailed"));
-      } finally {
-        setPendingTopperKey(null);
-      }
+  const handleSelectCm = useCallback(
+    (cm) => {
+      setLeaderboardSubject(null);
+      setSelectedSearchResult(cm ? { tier: "cm", data: cm } : null);
     },
-    [pendingTopperKey, showToast, t],
+    [setLeaderboardSubject, setSelectedSearchResult],
   );
+
+  const handleSelectMinister = useCallback(
+    (entry) => {
+      setLeaderboardSubject(null);
+      setSelectedSearchResult(entry ? { tier: "minister", data: entry } : null);
+    },
+    [setLeaderboardSubject, setSelectedSearchResult],
+  );
+
+  // Shared with the game page's highlight tiles, so "open this person" has one
+  // implementation rather than one per surface.
+  const { selectTopper: handleSelectTopper, pendingKey: pendingTopperKey } =
+    useTopperSelection({
+      onSelected: () => setOpenSheet(null),
+      onError: () => showToast(t("common.profileFailed")),
+    });
 
   const handleBackFromLeaderboardProfile = useCallback(() => {
     setLeaderboardSubject(null);
-  }, []);
+  }, [setLeaderboardSubject]);
+
+  /**
+   * "Back to your CM" for a subject that arrived by link rather than by a tap.
+   * There is no selection to clear in that case — the link itself is what is
+   * putting them on screen, so leaving means dropping it and tidying the URL to
+   * match. With no location granted yet this lands on the landing screen, which
+   * is the honest answer: we don't know their CM until they say where they are.
+   */
+  const handleLeaveDeepLink = useCallback(() => {
+    setDeepLinkDropped(true);
+    router.replace("/", { scroll: false });
+  }, [router]);
 
   /**
    * The wordmark: back to the landing screen, which asks for location again.
@@ -287,13 +269,17 @@ export function Home() {
     setDeepLinkDropped(true);
     setSelectedSearchResult(null);
     setLeaderboardSubject(null);
-    setPendingMinisterName(null);
-    setPendingCmState(null);
     setGeoError(null);
     setOpenSheet(null);
     setLastVote(null);
     router.replace("/", { scroll: false });
-  }, [setCoords, router]);
+  }, [
+    setCoords,
+    setSelectedSearchResult,
+    setLeaderboardSubject,
+    setLastVote,
+    router,
+  ]);
 
   const handleShare = useCallback(
     async (currentChoice) => {
@@ -322,18 +308,6 @@ export function Home() {
     [subject, coords, leaderboardSubject, showToast, t],
   );
 
-  // The lightweight reward beat after a vote commits — separate from the
-  // in-flight "winding" banner, which clears before the tally ever lands.
-  const handleVoteCast = useCallback(
-    (next) => {
-      setLastVote({ key: subjectKey, choice: next });
-      showToast(
-        next === "slap" ? t("vote.slapRecorded") : t("vote.roseRecorded"),
-      );
-    },
-    [subjectKey, showToast, t],
-  );
-
   // Let the sheet finish sliding out before the celebration springs in, so
   // the two backdrops never stack for a frame.
   const handleFeedbackSubmitted = useCallback((reaction) => {
@@ -348,12 +322,11 @@ export function Home() {
     isLoadingSeats,
     isError,
     hasSubject: Boolean(subject),
-    // A pending CM-by-state seed shows the loading screen, not the location
-    // prompt, until its fetch resolves into the card.
-    isSeeding: Boolean(pendingCmState),
+    // A linked CM shows the loading screen, not the location prompt, until
+    // its fetch resolves into the page.
+    isSeeding: Boolean(cmStateKey && !seededCm),
   });
 
-  const highlightsRef = useOnboardingTarget("todays-highlights");
   const { hasCompleted: tourCompleted, isTourOpen, startTour } = useOnboarding();
 
   /*
@@ -389,10 +362,20 @@ export function Home() {
         </div>
       )}
 
+      {/* The wait between the landing screen and the main page: the main
+          page's own skeleton, with the location step narrated inside it. */}
       {stage === "locating" && (
-        <LocatingScreen
-          label={t("status.locatingState")}
-          detail={t("status.locatingDetail")}
+        <InfoPageSkeleton
+          status={{
+            label: t("status.locatingState"),
+            detail: t("status.locatingDetail"),
+          }}
+          // Live, and pressable: this stage is also where a CM → MP switch
+          // waits, and the reader must be able to change their mind (or switch
+          // back) without the control vanishing under them.
+          switcher={
+            <HomeTierTabs value={homeTier} onChange={setHomeTier} />
+          }
         />
       )}
 
@@ -435,34 +418,64 @@ export function Home() {
                 ? handleBackFromLeaderboardProfile
                 : selectedSearchResult
                   ? () => setSelectedSearchResult(null)
-                  : null
+                  : deepLinkSelection
+                    ? handleLeaveDeepLink
+                    : null
             }
             backLabel={leaderboardSubject ? t("nav.back") : t("nav.backToCm")}
             onOpenMenu={() => setSidebarOpen(true)}
           />
 
-          <RepresentativeCard
-            key={subjectKey}
-            subject={subject}
-            keySeed={subjectKey}
-            onFirstVote={handleVoteCast}
-          />
+          {/*
+           * The information experience, inline — this is the main page now.
+           *
+           * Identity first (a compact portrait, the name, the office and the
+           * party), then the four tabs, then whatever tab is open. Exactly the
+           * order the Information sheet used, because that ordering was already
+           * right; only its address changed.
+           *
+           * The panel writes into the page's own scroll rather than a container
+           * of its own: one scrollbar for the whole page keeps the bottom bar
+           * where the reader expects it and the tab content free of a nested
+           * scroll region.
+           */}
+          {/*
+           * Which of the reader's own representatives they are looking at.
+           *
+           * Above the identity card, and built from the same `PillTabs` the
+           * information tabs use — one visual language for "switch what this
+           * section is showing", whether that is a tab of a profile or the
+           * person the profile is about.
+           *
+           * Only shown for the reader's own representatives: once they have
+           * searched someone, or tapped into a leaderboard row, "Your CM /
+           * Your MP" no longer describes what is on screen, and the header's
+           * Back control is the way out of that instead.
+           */}
+          {isHomeSubject && (
+            <HomeTierTabs value={homeTier} onChange={setHomeTier} />
+          )}
 
-          <motion.div {...rise(0.18)} ref={highlightsRef}>
-            {/* Reuses the leaderboard's own row handler, so a highlight tile
-                opens exactly the profile a leaderboard row would — same fetch,
-                same card, same back button. */}
-            <TodaysHighlight
-              onSelectSubject={handleSelectTopper}
-              pendingKey={pendingTopperKey}
+          <motion.div {...rise(0.1)} className="shrink-0">
+            <ProfileIdentityCard subject={subject} />
+          </motion.div>
+
+          {/* `flex-1` so the bottom bar still sits at the foot of a tall
+              viewport when a tab's content is short, without ever clipping a
+              long one — a flex item never shrinks below its content. */}
+          <motion.div {...rise(0.16)} className="flex-1">
+            <ProfilePanel
+              subject={subject}
+              bleedClass="-mx-4 sm:-mx-6"
+              gutterClass="px-4 sm:px-6"
             />
           </motion.div>
 
-          <motion.div {...rise(0.24)} className="sticky bottom-0 z-30">
+          <motion.div {...rise(0.28)} className="sticky bottom-0 z-30">
             <BottomActions
               onOpenSearch={() => setOpenSheet("search")}
               onOpenLeaderboard={() => setOpenSheet("leaderboard")}
-              onOpenInfo={() => setOpenSheet("info")}
+              onOpenGame={() => router.push("/game")}
               onOpenX={() => setOpenSheet("x")}
               onShare={() => handleShare(lastChoice)}
               shareHighlight={Boolean(lastChoice)}
@@ -480,6 +493,14 @@ export function Home() {
               setSidebarOpen(false);
               setFeedbackOpen(true);
             }}
+            onReplayTutorial={() => {
+              // Close first: the tour dims the whole screen, and starting it
+              // while the drawer is still sliding out would spotlight a nav bar
+              // with a panel crossing it. The delay is the drawer's own exit
+              // (220ms) plus a frame.
+              setSidebarOpen(false);
+              setTimeout(startTour, 260);
+            }}
           />
           {/*
            * First-run language prompt: fires as soon as a representative has
@@ -494,11 +515,6 @@ export function Home() {
             dismissible
           />
 
-          <PoliticianProfileSheet
-            open={openSheet === "info"}
-            onClose={closeSheet}
-            subject={subject}
-          />
           <LeaderboardSheet
             open={openSheet === "leaderboard"}
             onClose={closeSheet}
@@ -512,13 +528,9 @@ export function Home() {
             open={openSheet === "search"}
             onClose={closeSheet}
             defaultTier={subject.tier === "minister" ? "minister" : "cm"}
-            selectedCm={
-              selectedSearchResult?.tier === "cm" ? selectedSearchResult.data : null
-            }
+            selectedCm={selection?.tier === "cm" ? selection.data : null}
             selectedMinistry={
-              selectedSearchResult?.tier === "minister"
-                ? selectedSearchResult.data
-                : null
+              selection?.tier === "minister" ? selection.data : null
             }
             onSelectCm={handleSelectCm}
             onSelectMinister={handleSelectMinister}
@@ -548,6 +560,30 @@ export function Home() {
         </div>
       )}
     </main>
+  );
+}
+
+/**
+ * Which of the reader's own representatives the page is about.
+ *
+ * Its own component because it appears twice: on the page, and inside the
+ * skeleton while the other one is being fetched — the same live control in
+ * both, so pressing it never disappears mid-switch.
+ */
+function HomeTierTabs({ value, onChange }) {
+  const { t } = useTranslation();
+
+  return (
+    <motion.div {...rise(0.06)} className="shrink-0">
+      <div className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
+        <PillTabs
+          options={HOME_TIERS.map((entry) => ({ ...entry, label: t(entry.key) }))}
+          value={value}
+          onChange={onChange}
+          ariaLabel={t("card.homeTierAria")}
+        />
+      </div>
+    </motion.div>
   );
 }
 
@@ -764,76 +800,6 @@ function Toast({ message }) {
       )}
     </AnimatePresence>
   );
-}
-
-/**
- * The shared text always names the exact action taken — never generic
- * "rated" language, since the product is an explicit Slap/Rose choice, not a
- * rating scale.
- */
-function buildShareMessage(subject, currentChoice) {
-  if (currentChoice === "slap") {
-    return `I slapped ${subject.name}. 👋 Now it's your turn.`;
-  }
-  if (currentChoice === "rose") {
-    return `I gave ${subject.name} a 🌹. What's your verdict?`;
-  }
-  return `Slap or Rose ${subject.name}? Decide for yourself.`;
-}
-
-function buildShareUrl(subject, coords) {
-  if (typeof window === "undefined") return "";
-  const origin = window.location.origin;
-  const params = new URLSearchParams({ share: subject.tier });
-  if (subject.tier === "cm") {
-    // `state` drives the server-side share preview (`generateMetadata` fetches
-    // the CM by this indexed key — no geo query). `lat/lng` stay for the
-    // recipient's client, which still seeds the card from the sharer's spot.
-    if (subject.state_key) params.set("state", subject.state_key);
-    if (coords) {
-      params.set("lat", String(coords.latitude));
-      params.set("lng", String(coords.longitude));
-    }
-  } else if (subject.tier === "minister") {
-    params.set("name", subject.name);
-  }
-  return `${origin}/?${params.toString()}`;
-}
-
-/**
- * Resolves the subject to display, highest priority first: a search-picked
- * minister, a search-picked CM, then the home CM (resolved from location).
- * A CM's designation ("Chief Minister of X") is already a plain stored
- * string — unlike an MP, there's no cross-referencing needed to work out
- * whether this person also holds another office.
- */
-function buildSubject(selectedSearchResult, homeCm) {
-  if (selectedSearchResult?.tier === "minister") {
-    const entry = selectedSearchResult.data;
-    const m = entry.minister;
-    return {
-      tier: "minister",
-      name: m.minister_name,
-      minister_name: m.minister_name,
-      party: m.party,
-      photo_url: m.photo_url,
-      slap_count: m.slap_count,
-      rose_count: m.rose_count,
-      points: m.manifesto_points,
-      manifesto_points: m.manifesto_points,
-      ministry: entry.ministry,
-      portfolio: entry.portfolio || entry.label,
-      rank_title: entry.rank,
-      designation: entry.portfolio || entry.label,
-    };
-  }
-  if (selectedSearchResult?.tier === "cm") {
-    return { tier: "cm", ...selectedSearchResult.data, isHome: false };
-  }
-  if (homeCm) {
-    return { tier: "cm", ...homeCm, isHome: true };
-  }
-  return null;
 }
 
 function titleCase(value) {

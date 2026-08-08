@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 
 import { Badge, BADGES } from "../ui/Badge";
+import { useTranslation } from "@/lib/i18n";
 import { manifestoPoints } from "@/lib/manifesto";
 
 const INITIAL_POINTS = 3;
@@ -16,10 +17,18 @@ const INITIAL_POINTS = 3;
  * of three) changed, per the brief to leave this functionality alone until
  * it's expanded post-auth.
  */
+// Whose commitments these are. The list itself is the party's manifesto in
+// every case — the heading names the office the reader is looking at.
+const HEADING_KEY = {
+  minister: "profile.ministerCommitments",
+  mp: "profile.mpCommitments",
+  cm: "profile.cmCommitments",
+};
+
 export function ProfileManifestosTab({ subject }) {
+  const { t } = useTranslation();
   const [showAll, setShowAll] = useState(false);
 
-  const isMinister = subject.tier === "minister";
   const points = manifestoPoints(subject);
   const visiblePoints = showAll ? points : points.slice(0, INITIAL_POINTS);
 
@@ -28,9 +37,7 @@ export function ProfileManifestosTab({ subject }) {
       <div className="flex flex-wrap items-center gap-2">
         <Badge {...BADGES.record} size="sm" />
         <h3 className="font-display text-sm font-bold text-ink">
-          {isMinister
-            ? "Union Minister's commitments"
-            : "Chief Minister's commitments"}
+          {t(HEADING_KEY[subject.tier] ?? HEADING_KEY.cm)}
         </h3>
       </div>
 

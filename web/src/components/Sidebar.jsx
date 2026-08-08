@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Globe, MessageCircle, X } from "lucide-react";
+import { ChevronRight, Globe, MessageCircle, Sparkles, X } from "lucide-react";
 import { useEffect } from "react";
 
 import { useTranslation } from "@/lib/i18n";
@@ -11,12 +11,19 @@ import { SPRING_SHEET } from "@/lib/motion";
  * The app drawer, slid in from the left by the hamburger that sits outside the
  * nav bar.
  *
- * Two entries today — Language and Feedback — but built as a list of rows
- * rather than two bespoke buttons, so adding an item later is one array entry.
- * Feedback lives here now rather than in the header, where Live News took its
- * place.
+ * Three entries today — Language, Feedback and Replay tutorial — built as a
+ * list of rows rather than bespoke buttons, so adding an item later is one
+ * array entry. Feedback lives here rather than in the header, where Live News
+ * took its place; the tutorial replay moved here from the foot of the
+ * information tabs, where it repeated under all four of them.
  */
-export function Sidebar({ open, onClose, onOpenLanguage, onOpenFeedback }) {
+export function Sidebar({
+  open,
+  onClose,
+  onOpenLanguage,
+  onOpenFeedback,
+  onReplayTutorial,
+}) {
   const { t, language, languages } = useTranslation();
 
   // Lock body scroll and wire Escape while open — mirrors BottomSheet so every
@@ -52,6 +59,13 @@ export function Sidebar({ open, onClose, onOpenLanguage, onOpenFeedback }) {
       label: t("nav.feedback"),
       value: null,
       onClick: onOpenFeedback,
+    },
+    {
+      key: "replay",
+      icon: Sparkles,
+      label: t("onboarding.replay"),
+      value: null,
+      onClick: onReplayTutorial,
     },
   ];
 

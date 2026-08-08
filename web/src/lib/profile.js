@@ -16,15 +16,23 @@ function titleCase(value) {
     .replace(/(?:^|[\s-])\S/g, (character) => character.toUpperCase());
 }
 
-/** The one real "place" fact a subject has: a CM's state, a minister's portfolio. */
+/**
+ * The one real "place" fact a subject has: a CM's state, a minister's
+ * portfolio, an MP's constituency.
+ */
 export function placeOf(subject) {
   if (!subject) return null;
   if (subject.tier === "minister") return subject.portfolio || subject.ministry || null;
+  if (subject.tier === "mp") {
+    return subject.constituency ? titleCase(subject.constituency) : null;
+  }
   return subject.state ? titleCase(subject.state) : null;
 }
 
 export function placeLabelKeyOf(subject) {
-  return subject?.tier === "minister" ? "profile.portfolio" : "profile.state";
+  if (subject?.tier === "minister") return "profile.portfolio";
+  if (subject?.tier === "mp") return "profile.constituency";
+  return "profile.state";
 }
 
 /**
@@ -161,7 +169,9 @@ export function quickInsights(subject, t) {
   }
 
   const place = placeOf(subject);
-  if (place && subject.tier === "cm") {
+  if (place && subject.tier === "mp") {
+    insights.push(t("profile.insightMp", { place }));
+  } else if (place && subject.tier === "cm") {
     insights.push(t("profile.insightCm", { place }));
   } else if (place && subject.tier === "minister") {
     insights.push(t("profile.insightMinister", { place }));

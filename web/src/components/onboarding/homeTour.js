@@ -27,8 +27,10 @@ export const HOME_TOUR_STEPS = [
     radius: 9999,
   },
   {
-    id: "info",
-    target: "nav-info",
+    // Was the Information button; information is the page itself now, so the
+    // slot — and this step — belong to the game that moved out of it.
+    id: "game",
+    target: "nav-game",
     placement: "top",
     padding: 8,
     radius: 9999,
@@ -49,11 +51,7 @@ export const HOME_TOUR_STEPS = [
     padding: 8,
     radius: 9999,
   },
-  {
-    id: "highlights",
-    target: "todays-highlights",
-    placement: "top",
-    padding: 12,
-    radius: 26,
-  },
+  // Today's Highlights had a step here until it moved to the game route. A
+  // step whose target isn't on the page it tours would silently skip itself,
+  // which is worse than not having one — the tour ends on News instead.
 ];

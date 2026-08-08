@@ -22,6 +22,10 @@ const ROLE_LABEL = {
   // `rank_title` is server data (already localised upstream when available),
   // so it wins over the generic fallback.
   minister: (subject, t) => subject?.rank_title || t("card.unionMinister"),
+  // Same rule as the CM: "yours" only when this is the seat the reader's own
+  // coordinates fall in.
+  mp: (subject, t) =>
+    subject?.isHome ? t("card.yourMpRole") : t("card.memberOfParliament"),
 };
 
 /**

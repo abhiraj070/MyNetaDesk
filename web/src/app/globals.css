@@ -339,6 +339,24 @@ button:not(:disabled),
   display: none;
 }
 
+/*
+ * The indeterminate progress bar under a skeleton's status line. Travels a
+ * little past both ends so it reads as continuous motion rather than a shuttle
+ * bouncing off two walls.
+ */
+@keyframes progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.progress-sweep {
+  animation: progress-sweep 1.5s ease-in-out infinite;
+}
+
 /* The sweep used by skeleton placeholders while data loads. */
 @keyframes skeleton-sweep {
   100% {

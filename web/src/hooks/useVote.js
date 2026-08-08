@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
-import { castCmVote, castMinistryVote } from "@/lib/api";
+import { castCmVote, castMinistryVote, castMpVote } from "@/lib/api";
 
 /**
  * Records verdicts for one subject. Both sides stay open: you can slap, then
@@ -17,12 +17,13 @@ import { castCmVote, castMinistryVote } from "@/lib/api";
  * `baseline + casts[side]`. It resets on reload, which is correct — the count
  * the API returns already includes everything recorded earlier.
  *
- * `tier` is "cm" | "minister"; each goes to its own endpoint.
+ * `tier` is "cm" | "minister" | "mp"; each goes to its own endpoint.
  */
 const NO_CASTS = { slap: 0, rose: 0 };
 
+const CASTER = { minister: castMinistryVote, mp: castMpVote, cm: castCmVote };
+
 export function useVote(tier, subject) {
-  const isMinister = tier === "minister";
   const queryClient = useQueryClient();
 
   const [choice, setChoice] = useState(null);
@@ -42,7 +43,7 @@ export function useVote(tier, subject) {
   const serverRoses = subject?.rose_count ?? 0;
 
   const { mutate, isPending } = useMutation({
-    mutationFn: isMinister ? castMinistryVote : castCmVote,
+    mutationFn: CASTER[tier] ?? castCmVote,
     // A vote changes standings — invalidate every leaderboard query (all
     // tiers/boards share the `["leaderboard", ...]` prefix) so a currently
     // mounted board refetches immediately, and any not currently mounted is
@@ -64,6 +65,8 @@ export function useVote(tier, subject) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["cm-location"] });
+      // The MP equivalent of the home CM's query, for the same reason.
+      queryClient.invalidateQueries({ queryKey: ["mp-location"] });
       queryClient.invalidateQueries({ queryKey: ["highlights"] });
     },
   });
@@ -83,17 +86,24 @@ export function useVote(tier, subject) {
         (previous) => previous ?? { slap: serverSlaps, rose: serverRoses },
       );
 
-      const payload = isMinister
-        ? {
-            name: subject.minister_name,
-            ministryName: subject.ministry,
-            choice: next,
-          }
-        : {
-            name: subject.name,
-            stateKey: subject.state_key,
-            choice: next,
-          };
+      const payload =
+        tier === "minister"
+          ? {
+              name: subject.minister_name,
+              ministryName: subject.ministry,
+              choice: next,
+            }
+          : tier === "mp"
+            ? {
+                name: subject.name,
+                constituencyKey: subject.constituency_key,
+                choice: next,
+              }
+            : {
+                name: subject.name,
+                stateKey: subject.state_key,
+                choice: next,
+              };
 
       mutate(payload, {
         onError: () => {
@@ -106,7 +116,7 @@ export function useVote(tier, subject) {
         },
       });
     },
-    [isMinister, mutate, subject, serverSlaps, serverRoses],
+    [tier, mutate, subject, serverSlaps, serverRoses],
   );
 
   /**

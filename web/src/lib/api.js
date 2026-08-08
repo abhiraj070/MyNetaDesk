@@ -74,9 +74,43 @@ export async function fetchCmLocation({ latitude, longitude }) {
   return data;
 }
 
+/**
+ * `POST /get-location` — resolves a GPS point to the Member of Parliament for
+ * whichever parliamentary constituency contains it. Returns `{ mp }`; `mp` is
+ * null when the point falls outside every stored boundary.
+ *
+ * The CM equivalent (`/get-cm-location`) reads the same polygons purely for
+ * their `state_key`; this one is the constituency lookup those polygons exist
+ * for. The row carries the party's manifesto `points`, so an MP arrives with
+ * their manifesto already attached — no second request.
+ *
+ * Called only when the reader actually asks for their MP: this endpoint also
+ * increments the app's own visit counter, so firing it speculatively alongside
+ * the CM lookup would inflate that number for people who never open the tab.
+ */
+export async function fetchMpLocation({ latitude, longitude }) {
+  const { data } = await api.post("/get-location", { latitude, longitude });
+  return data?.mp ?? null;
+}
+
+/**
+ * `POST /get-mps-by-name` — the full record for one MP, identified by
+ * (name, constituency_key). Both are required by the endpoint, so this can
+ * only ever fetch an MP already identified elsewhere (a leaderboard row); there
+ * is no list-all or search-by-partial-name equivalent for MPs.
+ */
+export async function fetchMpByName({ name, constituencyKey }) {
+  const { data } = await api.post("/get-mps-by-name", {
+    name,
+    constituency_key: constituencyKey,
+  });
+  return data?.mp_details ?? null;
+}
+
 const LEADERBOARD_PATH = {
   cm: "/get-leaderboard-cm",
   minister: "/get-leaderboard-minister",
+  mp: "/get-leaderboard-mp",
 };
 
 /**
@@ -142,6 +176,28 @@ export async function castCmVote({ name, stateKey, choice }) {
   const { data } = await api.patch("/update-cm-count", {
     name_field_to_update: name,
     state_key: stateKey,
+    field_to_update: COLUMN_FOR_CHOICE[choice],
+  });
+  return data;
+}
+
+/**
+ * `PATCH /update-member-count` — increments an MP's slap or rose tally by one,
+ * identified by (constituency_key, name).
+ *
+ * KNOWN BACKEND FAULT (2026-08-08): this endpoint currently fails for every
+ * request with `subject table for an INSERT, UPDATE or DELETE expected, got
+ * 'mps'` — the handler passes the table *name* as a string where SQLAlchemy
+ * needs the Table object. Verified against a deliberately non-matching row, so
+ * nothing was written. The call is wired correctly here and will start working
+ * the moment the handler is fixed; until then an MP verdict surfaces the same
+ * error state any failed vote does. Not fixed here: this is frontend work.
+ */
+export async function castMpVote({ name, constituencyKey, choice }) {
+  const { data } = await api.patch("/update-member-count", {
+    table_to_update: "mps",
+    name_field_to_update: name,
+    constituency_key: constituencyKey,
     field_to_update: COLUMN_FOR_CHOICE[choice],
   });
   return data;
@@ -356,7 +412,14 @@ function identityPayload(subject) {
   // so it carries that column's values rather than a human-readable title —
   // sending "Chief Minister of Maharashtra" matches nothing and returns an
   // empty list rather than an error.
-  const designation = subject?.tier === "minister" ? "union_minister" : "cm";
+  //
+  // An MP must send its own value, not fall through to "cm": the table is
+  // matched on (canonical_name, subject_type, party), and a shared name would
+  // otherwise hand an MP a Chief Minister's timeline. Today `politicians` holds
+  // no MP rows at all, so this correctly returns nothing rather than something
+  // belonging to someone else.
+  const SUBJECT_TYPE = { minister: "union_minister", mp: "mp", cm: "cm" };
+  const designation = SUBJECT_TYPE[subject?.tier] ?? "cm";
 
   return {
     // The ENGLISH name, never the displayed one. `politicians.canonical_name`

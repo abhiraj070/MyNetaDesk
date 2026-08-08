@@ -15,11 +15,15 @@ import { ShareButton } from "./ShareButton";
 const TIER_COPY = {
   cm: { scope: "Chief Ministers across India's states" },
   minister: { scope: "India's Union Ministers" },
+  mp: { scope: "India's Members of Parliament" },
 };
 
+// MLAs are deliberately absent: state assembly members are not part of this
+// product, and there is no data source for them.
 const TIERS = [
   { value: "cm", label: "Chief Ministers" },
   { value: "minister", label: "Union Ministers" },
+  { value: "mp", label: "MPs" },
 ];
 
 const BOARDS = [
@@ -67,12 +71,14 @@ export function Leaderboard({
       </div>
 
       <div className="flex justify-center">
-        <PillTabs
-          options={TIERS}
-          value={tier}
-          onChange={setTier}
-          ariaLabel="Leaderboard tier"
-        />
+        <div className="no-scrollbar max-w-full overflow-x-auto">
+          <PillTabs
+            options={TIERS}
+            value={tier}
+            onChange={setTier}
+            ariaLabel="Leaderboard tier"
+          />
+        </div>
       </div>
 
       <p className="mt-2 text-center text-xs text-muted">
@@ -434,6 +440,9 @@ function formatSecondary(tier, topper) {
       .replace(/^Minister of\s*/i, "")
       .trim();
     return [party, cleaned || portfolio].filter(Boolean).join(" · ");
+  }
+  if (tier === "mp") {
+    return [party, titleCase(topper.constituency)].filter(Boolean).join(" · ");
   }
   const state = titleCase(topper.state);
   return [party, state].filter(Boolean).join(" · ");

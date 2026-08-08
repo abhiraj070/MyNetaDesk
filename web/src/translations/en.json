@@ -17,6 +17,7 @@
     "search": "Search",
     "leaderboard": "Leaderboard",
     "information": "Information",
+    "game": "Slap or Rose",
     "discussion": "X Live Discussion",
     "share": "Share",
     "liveNews": "Live News",
@@ -42,9 +43,9 @@
         "title": "Leaderboard",
         "body": "See which leaders have received the most Roses and Slaps across the country."
       },
-      "info": {
-        "title": "Info",
-        "body": "Learn more about the current leader, their profile, promises, and additional information."
+      "game": {
+        "title": "Slap or Rose",
+        "body": "Open the game to give this leader a slap or a rose — your verdict joins the national tally."
       },
       "posts": {
         "title": "X Posts",
@@ -122,7 +123,12 @@
     "cabinetMinister": "Cabinet Minister",
     "primeMinister": "Prime Minister",
     "chiefMinister": "Chief Minister",
-    "unionMinister": "Union Minister"
+    "unionMinister": "Union Minister",
+    "yourMp": "Your MP",
+    "mpOf": "Member of Parliament, {{place}}",
+    "memberOfParliament": "Member of Parliament",
+    "yourMpRole": "Your MP",
+    "homeTierAria": "Which of your representatives to show"
   },
   "vote": {
     "slap": "Slap",
@@ -135,6 +141,13 @@
     "noVerdicts": "No verdicts yet — be the first.",
     "yourVerdict": "Your verdict",
     "saveFailed": "That didn't save. Try again."
+  },
+  "game": {
+    "title": "Slap or Rose",
+    "subtitle": "Your verdict on today's leader.",
+    "noSubjectTitle": "Nobody to judge yet",
+    "noSubjectBody": "Head back to the main page and share your location so we can find your leader first.",
+    "noSubjectCta": "Find my leader"
   },
   "highlight": {
     "title": "Today's Highlight",
@@ -202,7 +215,10 @@
     "theirParty": "Their party",
     "collapse": "Collapse",
     "expand": "Expand",
-    "assetsChipAria": "Declared assets {{amount}} — view breakdown"
+    "assetsChipAria": "Declared assets {{amount}} — view breakdown",
+    "constituency": "Constituency",
+    "insightMp": "Currently the Member of Parliament for {{place}}.",
+    "mpCommitments": "MP's commitments"
   },
   "assets": {
     "title": "Declared Assets",
@@ -291,6 +307,10 @@
     "roadmap": "Coming Soon",
     "badge": "Coming soon",
     "live": "Live",
+    "journey": {
+      "title": "Political Journey is Coming Soon",
+      "body": "Career milestones and affidavit history for MPs aren't on record yet. This timeline will fill in as those records are added."
+    },
     "x": {
       "headerTitle": "X Pulse",
       "headerSubtitle": "Real-time political conversation",

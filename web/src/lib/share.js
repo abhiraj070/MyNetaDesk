@@ -13,3 +13,46 @@ export function leaderboardShareUrl(tier = "cm") {
   const t = tier === "minister" ? "minister" : "cm";
   return `${window.location.origin}/?share=leaderboard&tier=${t}`;
 }
+
+/**
+ * The shared text always names the exact action taken — never generic "rated"
+ * language, since the product is an explicit Slap/Rose choice, not a rating
+ * scale.
+ *
+ * Moved here from `home.jsx` when the game moved to its own route: the verdict
+ * is cast on `/game` and shared from both there and the information page, so
+ * neither route can own the wording.
+ */
+export function buildShareMessage(subject, currentChoice) {
+  if (currentChoice === "slap") {
+    return `I slapped ${subject.name}. 👋 Now it's your turn.`;
+  }
+  if (currentChoice === "rose") {
+    return `I gave ${subject.name} a 🌹. What's your verdict?`;
+  }
+  return `Slap or Rose ${subject.name}? Decide for yourself.`;
+}
+
+/**
+ * A link back to this subject. `coords` is passed only when the subject is the
+ * reader's own location-resolved CM — sending someone else's coordinates would
+ * silently open the wrong person's page for the recipient.
+ */
+export function buildShareUrl(subject, coords) {
+  if (typeof window === "undefined") return "";
+  const origin = window.location.origin;
+  const params = new URLSearchParams({ share: subject.tier });
+  if (subject.tier === "cm") {
+    // `state` drives the server-side share preview (`generateMetadata` fetches
+    // the CM by this indexed key — no geo query). `lat/lng` stay for the
+    // recipient's client, which still seeds the card from the sharer's spot.
+    if (subject.state_key) params.set("state", subject.state_key);
+    if (coords) {
+      params.set("lat", String(coords.latitude));
+      params.set("lng", String(coords.longitude));
+    }
+  } else if (subject.tier === "minister") {
+    params.set("name", subject.name);
+  }
+  return `${origin}/?${params.toString()}`;
+}

@@ -2,151 +2,19 @@
 
 import { motion } from "framer-motion";
 
-import { Menu } from "lucide-react";
-
 import { Button } from "./ui/Button";
-import { TodaysHighlight } from "./TodaysHighlight";
 import { rise } from "@/lib/motion";
 import { useTranslation } from "@/lib/i18n";
-import { NAV_MENU_BUTTON, NAV_SURFACE } from "@/lib/navStyles";
 
 const shell = "mx-auto w-full max-w-xl px-5 py-24 sm:px-8";
 
-/** A shimmering placeholder block — the sweep lives in globals.css. */
-function Skeleton({ className = "" }) {
-  return (
-    <span className={`relative block overflow-hidden bg-rule/70 ${className}`}>
-      <span className="skeleton-sweep" />
-    </span>
-  );
-}
-
-/**
- * A static, disabled stand-in for `BottomActions` — same pill, same five
- * icon slots, same spacing, so nothing reflows when the real bar (with its
- * live Share state) swaps in. `aria-hidden`: there's nothing here to press.
+/*
+ * The locating screen that used to live here moved to
+ * `components/skeletons/GamePageSkeleton` — it mirrored the hero card, the
+ * verdict discs and the highlight row, which is the game page's layout, not
+ * the information page's. The main page's own stand-in is
+ * `components/skeletons/InfoPageSkeleton`.
  */
-function BottomActionsSkeleton() {
-  return (
-    <nav aria-hidden className="shrink-0 pt-1.5 pb-2.5">
-      <div className="relative flex items-center justify-around gap-2 rounded-full bg-linear-to-b from-white/92 to-surface/80 px-3 py-2 shadow-lift ring-1 ring-ink/5 backdrop-blur-xl">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-6 top-px h-px rounded-full bg-white/70"
-        />
-        {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="size-11 rounded-full" />
-        ))}
-      </div>
-    </nav>
-  );
-}
-
-/**
- * Rather than a lonely spinner over empty space, the locating state renders
- * the skeleton of the page it's about to become — the same app-bar row, hero
- * card, verdict discs, highlight row and bottom bar, in the same footprint —
- * with the live status sitting inside the card. When the real data lands the
- * layout barely shifts, so the wait reads as the page assembling itself
- * rather than a blank interstitial.
- *
- * `TodaysHighlight` is the real component, not a mimic: it fetches
- * independently of the CM/location lookup this screen is waiting on and
- * already renders its own shimmer per-tile while its own data is in flight,
- * so reusing it here is both more accurate than a hand-built placeholder and
- * one less thing to keep in sync with the real layout.
- */
-export function LocatingScreen({ label, detail }) {
-  return (
-    <motion.div
-      {...rise(0)}
-      className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-3 px-4 pt-2 sm:px-6 sm:pt-3"
-    >
-      {/*
-        * Deliberately the same shape as the real `ResultsHeader`: hamburger
-        * outside the bar, floating glass bar with the wordmark, then the two
-        * controls. Both pull from `navStyles`, so the bar cannot change shape
-        * at the moment the real screen replaces this one.
-        *
-        * The wordmark is real text, not a skeleton — it is known before any
-        * request resolves, and shimmering something we can already show reads
-        * as slower, not faster.
-        */}
-      <header className="flex shrink-0 items-center gap-2.5 pt-1 pb-3 sm:pb-4">
-        <div className={`${NAV_MENU_BUTTON} ${NAV_SURFACE}`}>
-          <Menu className="size-5 text-faint" strokeWidth={2.25} />
-        </div>
-
-        <div
-          className={`flex min-w-0 flex-1 items-center gap-3 py-2 pr-2 pl-4 ${NAV_SURFACE}`}
-        >
-          <p className="shrink-0 font-display text-lg leading-none font-bold tracking-tight text-ink">
-            MyNetaji
-          </p>
-          <div className="ml-auto flex min-w-0 items-center gap-2">
-            <Skeleton className="size-9 rounded-full" />
-            <Skeleton className="h-9 w-[5.5rem] rounded-full" />
-          </div>
-        </div>
-      </header>
-
-      <div className="relative flex min-h-[56dvh] flex-1 flex-col items-center justify-center gap-5 rounded-card bg-surface px-5 py-6 shadow-hero ring-1 ring-inset ring-ink/5 sm:px-8 sm:py-8">
-        {/* Mirrors the real card's "Featured" sticker — absolutely
-            positioned there too, so it never nudges the content below it. */}
-        <Skeleton className="absolute -top-2.5 left-4 h-6 w-20 rounded-full sm:left-6" />
-
-        <Skeleton className="aspect-[3/4] w-[46vw] max-w-[12.5rem] rounded-photo sm:w-52" />
-
-        {/* The live status — pin, label, detail, progress — stands in for
-            the name/designation lines the real card shows here: keeping this
-            block at the same height budget the original design had is what
-            keeps the card from growing taller than the real one and pushing
-            the sticky bottom bar into the highlight row below. */}
-        <div className="flex flex-col items-center gap-2.5 text-center">
-          <motion.p
-            aria-hidden
-            animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            className="text-3xl"
-          >
-            📍
-          </motion.p>
-          <h2
-            aria-live="polite"
-            className="font-display text-lg font-bold text-ink sm:text-xl"
-          >
-            {label}
-          </h2>
-          <p className="max-w-xs text-xs leading-relaxed font-medium text-muted">
-            {detail}
-          </p>
-          {/* An indeterminate sweep — the quietest possible progress cue. */}
-          <div
-            role="presentation"
-            className="mt-1 h-1.5 w-44 overflow-hidden rounded-full bg-rule"
-          >
-            <motion.div
-              className="h-full w-1/3 rounded-full bg-linear-to-r from-brand to-slap"
-              animate={{ x: ["-100%", "320%"] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto flex w-full max-w-md shrink-0 items-center justify-center gap-8 sm:gap-12">
-        <Skeleton className="size-28 rounded-full sm:size-32" />
-        <Skeleton className="size-28 rounded-full sm:size-32" />
-      </div>
-
-      <TodaysHighlight onSelectSubject={undefined} pendingKey={null} />
-
-      <div className="sticky bottom-0 z-30">
-        <BottomActionsSkeleton />
-      </div>
-    </motion.div>
-  );
-}
 
 export function ErrorScreen({ overline, title, body, onRetry }) {
   const { t } = useTranslation();

@@ -165,6 +165,37 @@ export function PreviewNote({ title, body, bullets, order = 0 }) {
 }
 
 /**
+ * The compact form, for a tab that has its section built but no data behind it
+ * yet — an MP's Political Journey, where the timeline component is wired up and
+ * the source simply holds no MP records.
+ *
+ * Same tile, same tone and same voice as the full-page previews above, sized to
+ * sit inside a tab rather than fill a sheet. It states what will appear here
+ * rather than apologising for what doesn't.
+ */
+export function InlineComingSoon({ icon, title, body, order = 0 }) {
+  return (
+    <motion.div
+      {...enter(order)}
+      className="flex flex-col items-center rounded-card bg-linear-to-br from-brand-wash via-surface to-surface px-6 py-8 text-center shadow-card ring-1 ring-inset ring-brand/15"
+    >
+      <span
+        aria-hidden
+        className="flex size-12 items-center justify-center rounded-[18px] bg-surface text-2xl leading-none shadow-card ring-1 ring-inset ring-brand/15"
+      >
+        {icon}
+      </span>
+      <h4 className="mt-3 font-display text-base leading-tight font-bold text-ink">
+        {title}
+      </h4>
+      <p className="mt-1.5 max-w-xs text-sm leading-relaxed font-medium text-muted">
+        {body}
+      </p>
+    </motion.div>
+  );
+}
+
+/**
  * The one action. It closes the preview and nothing else — there is nothing to
  * sign up for and nothing to be notified about, so the button says only what it
  * honestly does.

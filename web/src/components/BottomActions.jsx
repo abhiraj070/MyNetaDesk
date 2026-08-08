@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, Search, Share2, Trophy } from "lucide-react";
+import { Gavel, Search, Share2, Trophy } from "lucide-react";
 
 import { IconAction } from "./ui/IconAction";
 import { useTranslation } from "@/lib/i18n";
@@ -19,7 +19,7 @@ import { XLogo } from "./x/XLogo";
 export function BottomActions({
   onOpenSearch,
   onOpenLeaderboard,
-  onOpenInfo,
+  onOpenGame,
   onShare,
   onOpenX,
   shareHighlight = false,
@@ -31,7 +31,7 @@ export function BottomActions({
   // that is never toured behaves exactly as before.
   const searchRef = useOnboardingTarget("nav-search");
   const leaderboardRef = useOnboardingTarget("nav-leaderboard");
-  const infoRef = useOnboardingTarget("nav-info");
+  const gameRef = useOnboardingTarget("nav-game");
   const discussionRef = useOnboardingTarget("nav-x");
 
   return (
@@ -57,11 +57,15 @@ export function BottomActions({
           icon={Trophy}
           anchorRef={leaderboardRef}
         />
+        {/* Where Information used to sit. Information is the page now, so
+            the slot goes to the thing that left it: the gavel opens the
+            Slap/Rose game on its own route. Same size, same position, same
+            styling as every other action — only the destination changed. */}
         <IconAction
-          label={t("nav.information")}
-          onClick={onOpenInfo}
-          icon={Info}
-          anchorRef={infoRef}
+          label={t("nav.game")}
+          onClick={onOpenGame}
+          icon={Gavel}
+          anchorRef={gameRef}
         />
         <IconAction
           label={t("nav.discussion")}
