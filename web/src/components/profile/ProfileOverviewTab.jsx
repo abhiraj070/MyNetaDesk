@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronRight, Scale, Sparkles, Wallet } from "lucide-react";
+import { ChevronRight, Gavel, Scale, Sparkles, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { atAGlanceMetrics, quickInsights } from "@/lib/profile";
@@ -10,6 +10,7 @@ import { SPRING_POP } from "@/lib/motion";
 
 const METRIC_ICON = {
   verdict: Scale,
+  cases: Gavel,
   assets: Wallet,
 };
 
@@ -45,9 +46,11 @@ export function ProfileOverviewTab({ subject, onOpenAssets }) {
     <div className="space-y-7 pb-7">
       <section>
         <h3 className="eyebrow">{t("profile.atAGlance")}</h3>
-        {/* Two cards, one row. `items-stretch` keeps them the same height
-            whichever one is taller — the verdict card carries a bar and the
-            assets card a tap hint, so they rarely agree on their own. */}
+        {/* `items-stretch` keeps every card the same height whichever is
+            taller — the verdict card carries a bar and the assets card a tap
+            hint, so they rarely agree on their own. Three cards in a
+            two-column grid means the third takes the next row at the same
+            width, which keeps the card shape identical to the other two. */}
         <div className="mt-3 grid grid-cols-2 items-stretch gap-3.5">
           {metrics.map((metric) => (
             <MetricCard
@@ -110,7 +113,11 @@ function MetricCard({ metric, onClick }) {
             from a full party name ("Bharatiya Janata Party"); with that metric
             gone, the only values left are short enough to wrap to a second
             line, and clipping them just produced "Tap to view break…". */}
-        <span className="mt-0.5 block font-display text-sm leading-snug font-bold text-balance text-ink">
+        <span
+          className={`mt-0.5 block font-display text-sm leading-snug font-bold text-balance ${
+            metric.muted ? "text-faint" : "text-ink"
+          }`}
+        >
           {metric.value}
         </span>
       </span>

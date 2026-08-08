@@ -94,17 +94,34 @@ export async function fetchMpLocation({ latitude, longitude }) {
 }
 
 /**
- * `POST /get-mps-by-name` — the full record for one MP, identified by
- * (name, constituency_key). Both are required by the endpoint, so this can
- * only ever fetch an MP already identified elsewhere (a leaderboard row); there
- * is no list-all or search-by-partial-name equivalent for MPs.
+ * `POST /get-mps-by-name` — one MP, by id or by (name, constituency_key).
+ * Returns `{ mp_details }`, `null` when nothing matches. The single-record
+ * modes are the ones that carry the party manifesto `points`.
  */
-export async function fetchMpByName({ name, constituencyKey }) {
+export async function fetchMpByName({ id, name, constituencyKey }) {
   const { data } = await api.post("/get-mps-by-name", {
-    name,
-    constituency_key: constituencyKey,
+    id: id ?? null,
+    name: name ?? null,
+    constituency_key: constituencyKey ?? null,
   });
   return data?.mp_details ?? null;
+}
+
+/**
+ * `POST /get-mps-by-name` with a partial `name` — up to 25 matching MPs,
+ * `{ mps: [...] }`.
+ *
+ * Searched on the server rather than filtered client-side like the CM and
+ * ministry pickers: those hold 31 and 85 rows, this one is 543, and the full
+ * list is ~190KB and several seconds to build. The rows come back slim (no
+ * manifesto), which is all the result list renders — the chosen MP's full
+ * record is fetched by id on selection.
+ */
+export async function searchMps(query) {
+  const term = String(query ?? "").trim();
+  if (!term) return [];
+  const { data } = await api.post("/get-mps-by-name", { name: term });
+  return Array.isArray(data?.mps) ? data.mps : [];
 }
 
 const LEADERBOARD_PATH = {

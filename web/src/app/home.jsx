@@ -27,7 +27,7 @@ import { XDiscussionSheet } from "@/components/x/XDiscussionSheet";
 import { useMinistries } from "@/hooks/useMinistries";
 import { useTopperSelection } from "@/hooks/useTopperSelection";
 import { useScrolled } from "@/hooks/useScrolled";
-import { fetchCmByStateKey, toFriendlyError } from "@/lib/api";
+import { fetchCmByStateKey, fetchMpByName, toFriendlyError } from "@/lib/api";
 import { GeolocationError, requestPosition } from "@/lib/geolocation";
 import { useLocationState } from "@/lib/location";
 import { useTranslation } from "@/lib/i18n";
@@ -35,6 +35,7 @@ import { rise, SPRING_POP } from "@/lib/motion";
 import { useOnboarding, useOnboardingTarget } from "@/lib/onboarding";
 import { buildShareMessage, buildShareUrl } from "@/lib/share";
 import {
+  buildMpSubject,
   subjectKeyOf,
   useResolvedSubject,
   useSubjectSelection,
@@ -226,6 +227,34 @@ export function Home() {
       setSelectedSearchResult(entry ? { tier: "minister", data: entry } : null);
     },
     [setLeaderboardSubject, setSelectedSearchResult],
+  );
+
+  /**
+   * A search result is a slim row — the list query leaves the manifesto behind
+   * because attaching it to 543 MPs is megabytes. The full record is fetched by
+   * id here, so the profile opens with its Manifestos tab populated.
+   *
+   * Routed through the leaderboard-subject slot rather than the search slot for
+   * the same reason a leaderboard row is: both are "a fully-fetched person to
+   * show", and `buildSubject` only knows how to build CMs and ministers.
+   */
+  const handleSelectMp = useCallback(
+    async (row) => {
+      if (!row) {
+        setLeaderboardSubject(null);
+        return;
+      }
+      setSelectedSearchResult(null);
+      try {
+        const details = await fetchMpByName({ id: row.id });
+        setLeaderboardSubject(
+          buildMpSubject(details ?? row, { isHome: false, t }),
+        );
+      } catch {
+        showToast(t("common.profileFailed"));
+      }
+    },
+    [setLeaderboardSubject, setSelectedSearchResult, showToast, t],
   );
 
   // Shared with the game page's highlight tiles, so "open this person" has one
@@ -534,6 +563,10 @@ export function Home() {
             }
             onSelectCm={handleSelectCm}
             onSelectMinister={handleSelectMinister}
+            selectedMp={
+              leaderboardSubject?.tier === "mp" ? leaderboardSubject : null
+            }
+            onSelectMp={handleSelectMp}
           />
           <XDiscussionSheet
             open={openSheet === "x"}
@@ -574,15 +607,18 @@ function HomeTierTabs({ value, onChange }) {
   const { t } = useTranslation();
 
   return (
-    <motion.div {...rise(0.06)} className="shrink-0">
-      <div className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
-        <PillTabs
-          options={HOME_TIERS.map((entry) => ({ ...entry, label: t(entry.key) }))}
-          value={value}
-          onChange={onChange}
-          ariaLabel={t("card.homeTierAria")}
-        />
-      </div>
+    // Centred in the content column. Unlike the four information tabs — which
+    // can outgrow a phone and so have to scroll from the left edge — this row
+    // is two short labels that fit at every width, so it is simply centred and
+    // needs no scroller. `PillTabs` itself is untouched: same type, spacing,
+    // pill, active state and spring.
+    <motion.div {...rise(0.06)} className="flex shrink-0 justify-center">
+      <PillTabs
+        options={HOME_TIERS.map((entry) => ({ ...entry, label: t(entry.key) }))}
+        value={value}
+        onChange={onChange}
+        ariaLabel={t("card.homeTierAria")}
+      />
     </motion.div>
   );
 }
@@ -606,11 +642,20 @@ function ResultsHeader({
 }) {
   const { t } = useTranslation();
   const scrolled = useScrolled();
-  // The state chip only ever applies to the actual home CM (resolved from
-  // the user's own location) — a minister, a searched-in CM, or a
-  // leaderboard-navigated CM all show the back button in this slot instead.
-  const location =
-    subject.tier === "cm" && subject.isHome ? titleCase(subject.state ?? "") : null;
+  // The place chip only ever applies to the reader's own representative — a
+  // minister, a searched-in CM or MP, or a leaderboard-navigated one all show
+  // the back button in this slot instead.
+  //
+  // Which place depends on who: a Chief Minister governs a state, an MP holds a
+  // constituency. Showing "Delhi" beside an MP would name the wrong unit — the
+  // seat is what they were elected to.
+  const location = !subject.isHome
+    ? null
+    : subject.tier === "cm"
+      ? titleCase(subject.state ?? "")
+      : subject.tier === "mp"
+        ? titleCase(subject.constituency ?? "")
+        : null;
 
   return (
     // The extra bottom margin sits on the header alone, so the gap to the

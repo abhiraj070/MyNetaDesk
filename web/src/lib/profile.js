@@ -51,6 +51,18 @@ export function placeLabelKeyOf(subject) {
 export function atAGlanceMetrics(subject, t) {
   if (!subject) return [];
 
+  /*
+   * Declared criminal cases.
+   *
+   * Only the `mps` table carries this column — `chief_ministers` and
+   * `ministers` have no equivalent field, so for those two the card says the
+   * figure is on its way rather than showing a zero. A zero here would be a
+   * claim ("no cases declared") that the data does not actually make, and it
+   * is the worst possible number to get wrong on a politician.
+   */
+  const cases = subject.criminalCases;
+  const hasCases = typeof cases === "number";
+
   return [
     {
       key: "verdict",
@@ -58,6 +70,14 @@ export function atAGlanceMetrics(subject, t) {
       value: `${Number(subject.slap_count ?? 0).toLocaleString("en-IN")} 👋 · ${Number(subject.rose_count ?? 0).toLocaleString("en-IN")} 🌹`,
       slap: Number(subject.slap_count ?? 0),
       rose: Number(subject.rose_count ?? 0),
+    },
+    {
+      key: "cases",
+      label: t("profile.criminalCases"),
+      value: hasCases
+        ? cases.toLocaleString("en-IN")
+        : t("comingSoon.badge"),
+      muted: !hasCases,
     },
     {
       key: "assets",

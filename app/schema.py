@@ -32,8 +32,13 @@ class GetMinisterRequest(BaseModel):
     lang: str = "en"
 
 class GetMpRequest(BaseModel):
-    name: str
-    constituency_key: str
+    # Defaults matter: in Pydantic v2 `Optional[str]` on its own is still a
+    # required field, so without them every lookup had to send all three.
+    # With them, an empty body means "list all", mirroring GetCmRequest.
+    name: Optional[str] = None
+    id: Optional[int] = None
+    lang: str = "en"
+    constituency_key: Optional[str] = None
 
 class GetCmRequest(BaseModel):
     state_key: Optional[str] = None
@@ -57,4 +62,8 @@ class GetAssetsRequest(BaseModel):
     designation: str
     party: str
     lang: str = "en"
-    
+
+class UpdateMpsRequest(BaseModel):
+    name: str
+    constituency_key: str
+    field_to_update: str

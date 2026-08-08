@@ -5,14 +5,17 @@ import { useState } from "react";
 import { BottomSheet } from "./BottomSheet";
 import { CmCombobox } from "./CmCombobox";
 import { MinistryCombobox } from "./MinistryCombobox";
+import { MpCombobox } from "./MpCombobox";
 import { PillTabs } from "./Leaderboard";
 import { useChiefMinisters } from "@/hooks/useChiefMinisters";
 import { useMinistries } from "@/hooks/useMinistries";
 import { toFriendlyError } from "@/lib/api";
 
+// MLAs are deliberately absent — out of scope, and no data source exists.
 const TIERS = [
   { value: "cm", label: "Chief Ministers" },
   { value: "minister", label: "Union Ministers" },
+  { value: "mp", label: "MPs" },
 ];
 
 /**
@@ -31,8 +34,10 @@ export function SearchSheet({
   defaultTier = "cm",
   selectedCm,
   selectedMinistry,
+  selectedMp,
   onSelectCm,
   onSelectMinister,
+  onSelectMp,
 }) {
   const [tier, setTier] = useState(defaultTier);
 
@@ -47,8 +52,11 @@ export function SearchSheet({
   } = useMinistries();
 
   const isCm = tier === "cm";
-  const isPending = isCm ? cmsPending : ministriesPending;
-  const isError = isCm ? cmsError : ministriesError;
+  const isMp = tier === "mp";
+  // The MP picker fetches per query rather than up front, so it owns its own
+  // loading and error states — there is nothing to wait for before showing it.
+  const isPending = isMp ? false : isCm ? cmsPending : ministriesPending;
+  const isError = isMp ? false : isCm ? cmsError : ministriesError;
   const error = isCm ? cmsErrorObj : ministriesErrorObj;
 
   return (
@@ -59,11 +67,13 @@ export function SearchSheet({
       size="tall"
       autoFocus
       subtitle={
-        isCm
-          ? `All ${cms.length || 31} states of India`
-          : ministryCount
-            ? `Any of ${ministryCount} ministries in the union council`
-            : "India's Union Ministers"
+        isMp
+          ? "Any of India's 543 Lok Sabha members"
+          : isCm
+            ? `All ${cms.length || 31} states of India`
+            : ministryCount
+              ? `Any of ${ministryCount} ministries in the union council`
+              : "India's Union Ministers"
       }
     >
       <div className="mb-4 flex justify-center">
@@ -90,6 +100,17 @@ export function SearchSheet({
         </div>
       )}
 
+      {isMp && (
+        <MpCombobox
+          selected={selectedMp}
+          onSelect={(mp) => {
+            onSelectMp(mp);
+            onClose();
+          }}
+          onClear={() => onSelectMp(null)}
+        />
+      )}
+
       {!isPending && !isError && isCm && (
         <CmCombobox
           cms={cms}
@@ -102,7 +123,7 @@ export function SearchSheet({
         />
       )}
 
-      {!isPending && !isError && !isCm && (
+      {!isPending && !isError && !isCm && !isMp && (
         <MinistryCombobox
           entries={entries}
           selected={selectedMinistry}
@@ -115,9 +136,11 @@ export function SearchSheet({
       )}
 
       <p className="mt-6 text-xs text-muted">
-        {isCm
-          ? "Pick a state to swap the card to that Chief Minister. Your CM stays a tap away."
-          : "Pick a ministry to swap the card to that Union Minister. Your CM stays a tap away."}
+        {isMp
+          ? "Search a name to open that MP's profile. Your own representative stays a tap away."
+          : isCm
+            ? "Pick a state to swap the card to that Chief Minister. Your CM stays a tap away."
+            : "Pick a ministry to swap the card to that Union Minister. Your CM stays a tap away."}
       </p>
     </BottomSheet>
   );

@@ -3,7 +3,7 @@ from urllib import request, response
 from app.main import app
 from app.schema import (LocationRequest, MinistrySearchRequest, UpdateMinistryRequest, UpdateMemberRequest,
                         GetMinisterRequest, GetMpRequest, GetCmRequest, UpdateCmRequest, TweetRequest,
-                        FeedbackRequest, GetAssetsRequest)
+                        FeedbackRequest, GetAssetsRequest, UpdateMpsRequest)
 from app.db.connect import get_db, engine
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, Query
@@ -22,6 +22,7 @@ metadata= MetaData()
 mp= Table("mps", metadata, autoload_with= engine)
 pc= Table("parliamentary_constituencies", metadata, autoload_with= engine)
 manifesto= Table("party_manifesto_points", metadata, autoload_with=engine)
+mp_hindi= Table("mps_hindi", metadata, autoload_with= engine)
 minister= Table("ministers", metadata, autoload_with= engine)
 cm= Table("chief_ministers", metadata, autoload_with= engine)
 politician= Table("politicians", metadata, autoload_with= engine)
@@ -49,10 +50,77 @@ def cm_columns(lang, *names):
 def minister_columns(lang, *names):
     return tuple(_localised(minister, n, lang) for n in names)
 
-
 def milestone_columns(lang, *names):
     return tuple(_localised(milestones, n, lang) for n in names)
 
+def mp_localised(lang):
+    """MP name/state/constituency, Hindi-preferring when asked for.
+
+    `mps` keeps its Hindi in a side table rather than in `*_hindi` columns (see
+    app/db/model/localisation.py), so this coalesces across the join instead of
+    across two columns of one row — same fallback behaviour as `_localised`:
+    a missing translation shows the English text, never a blank.
+
+    Callers must add `mp_hindi_join()` to the statement when lang is Hindi.
+    """
+    if lang != HINDI:
+        return mp.c.name, mp.c.state, mp.c.constituency
+    return (
+        func.coalesce(mp_hindi.c.name_hindi, mp.c.name).label("name"),
+        func.coalesce(mp_hindi.c.state_hindi, mp.c.state).label("state"),
+        func.coalesce(mp_hindi.c.constituency_hindi, mp.c.constituency).label("constituency"),
+    )
+
+
+def with_mp_hindi(stmt, lang):
+    """Left-joins the Hindi side table, but only when Hindi is being served.
+
+    `select_from(mp)` is not optional. The coalesced columns already mention
+    `mps_hindi`, which puts it in the FROM clause on its own; joining it again
+    without anchoring the statement to `mps` produced a cross join — every MP
+    paired with every Hindi row, so a search for one name came back 25 times
+    with other people's states attached.
+    """
+    if lang != HINDI:
+        return stmt
+    return stmt.select_from(mp).join(
+        mp_hindi, mp.c.id==mp_hindi.c.mp_id, isouter=True
+    )
+
+
+def manifesto_columns(lang):
+    """The manifesto column(s) to select.
+
+    Both, when Hindi is asked for: `points` is text[] while `points_hindi` is
+    text holding a JSON array, and Postgres cannot COALESCE across those two
+    types. `localise_points` picks between them after the row comes back.
+    """
+    if lang != HINDI:
+        return (manifesto.c.points,)
+    return (manifesto.c.points, manifesto.c.points_hindi)
+
+
+def localise_points(row, lang):
+    """Swaps the Hindi manifesto in and drops the raw column from the response.
+
+    A row with no Hindi translation keeps its English `points`, so a party that
+    has not been translated reads in English rather than coming back empty.
+    """
+    if row is None or lang != HINDI:
+        return row
+    data= dict(row)
+    raw= data.pop("points_hindi", None)
+    if raw:
+        try:
+            parsed= json.loads(raw)
+            if isinstance(parsed, list):
+                data["points"]= parsed
+        except (TypeError, ValueError):
+            pass
+    return data
+
+
+MP_NAME_EN = mp.c.name.label("name_en")
 CM_NAME_EN = cm.c.name.label("name_en")
 MINISTER_NAME_EN = minister.c.minister_name.label("minister_name_en")
 
@@ -67,13 +135,22 @@ def get_location(request: LocationRequest, db: Session= Depends(get_db)):
             4326
         )
 
-        stmt= (select(mp.c.name, mp.c.party, mp.c.criminal_cases, mp.c.education, mp.c.photo_url, mp.c.slap_count, mp.c.rose_count, mp.c.constituency, mp.c.constituency_key, manifesto.c.points)
+        lang= request.lang
+        mp_name, mp_state, mp_constituency= mp_localised(lang)
+        stmt= (select(mp.c.id, mp_name, MP_NAME_EN, mp.c.party, mp.c.criminal_cases,
+                      mp.c.education, mp.c.photo_url, mp.c.slap_count, mp.c.rose_count,
+                      mp_state, mp_constituency, mp.c.constituency_key,
+                      *manifesto_columns(lang))
+                .select_from(mp)
                 .join(pc, (mp.c.constituency_key==pc.c.constituency_key) & (mp.c.state_key==pc.c.state_key))
-                .join(manifesto, mp.c.party==manifesto.c.party)
-                .where(func.ST_Contains(pc.c.geom, user_point))
+                # Outer: an MP whose party has no manifesto row must still resolve.
+                .join(manifesto, mp.c.party==manifesto.c.party, isouter=True)
         )
+        if lang == HINDI:
+            stmt= stmt.join(mp_hindi, mp.c.id==mp_hindi.c.mp_id, isouter=True)
+        stmt= stmt.where(func.ST_Contains(pc.c.geom, user_point))
 
-        final_mp= db.execute(stmt).mappings().first()
+        final_mp= localise_points(db.execute(stmt).mappings().first(), lang)
         stmt2= (update(count).where(count.c.id==123).values(cnt= count.c["cnt"]+1))
         db.execute(stmt2)
         db.commit()
@@ -109,22 +186,23 @@ def get_minister(request: MinistrySearchRequest, db: Session= Depends(get_db)):
 
 
 @app.get("/get-leaderboard-mp")
-def get_leaderboard_mp(offset:int= Query(0,ge=0,le=100), limit: int= Query(10,ge=1,le=100), db: Session= Depends(get_db)):
+def get_leaderboard_mp(offset:int= Query(0,ge=0,le=100), limit: int= Query(10,ge=1,le=100), lang: str= Query("en"), db: Session= Depends(get_db)):
     try:
-        cols= (mp.c.name, mp.c.party, mp.c.constituency, mp.c.constituency_key,
-               mp.c.photo_url, mp.c.slap_count, mp.c.rose_count)
+        mp_name, _mp_state, mp_constituency= mp_localised(lang)
+        cols= (mp.c.id, mp_name, MP_NAME_EN, mp.c.party, mp_constituency,
+               mp.c.constituency_key, mp.c.photo_url, mp.c.slap_count, mp.c.rose_count)
         slap_toppers= db.execute(
-            select(*cols).order_by(mp.c.slap_count.desc(), mp.c.id.asc())
+            with_mp_hindi(select(*cols), lang)
+                         .order_by(mp.c.slap_count.desc(), mp.c.id.asc())
                          .limit(limit)
                          .offset(offset)
         ).mappings().all()
         rose_toppers= db.execute(
-            select(*cols).order_by(mp.c.rose_count.desc(), mp.c.id.asc())
+            with_mp_hindi(select(*cols), lang)
+                         .order_by(mp.c.rose_count.desc(), mp.c.id.asc())
                          .limit(limit)
                          .offset(offset)
-
         ).mappings().all()
-        print("res:",slap_toppers)
         return {"slap_toppers": slap_toppers, "rose_toppers": rose_toppers}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -166,7 +244,9 @@ def update_member_count(request: UpdateMemberRequest, db: Session= Depends(get_d
         if field not in ("slap_count","rose_count"):
             raise HTTPException(status_code=400, detail=f"Cannot update {field} field")
 
-        member= table
+        member= {"mps": mp}.get(table)
+        if member is None:
+            raise HTTPException(status_code=400, detail=f"Cannot update table {table}")
 
         stmt= (update(member)
                .where((member.c.constituency_key==constituency_key) & (member.c.name==name))
@@ -225,6 +305,46 @@ def update_ministry_count(request: UpdateMinistryRequest, db: Session= Depends(g
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
+@app.patch("/update-mps-count")
+def update_ministry_count(request: UpdateMpsRequest, db: Session= Depends(get_db)):
+    try:
+        name= request.name
+        constituency_key= request.constituency_key
+        field= request.field_to_update
+        if field not in ("slap_count", "rose_count"):
+            raise HTTPException(status_code=400, detail=f"Cannot update {field} field")
+        if field=="rose_count":
+            today_count="rose_count_today"
+        else:
+            today_count= "slap_count_today"
+        stmt= (update(mp)
+                .where((mp.c.constituency_key==constituency_key) & (mp.c.name==name))
+                .values({
+                    field: mp.c[field]+1,
+                    today_count: func.coalesce(mp.c[today_count], 0)+1,
+                })
+        )
+
+        result= db.execute(stmt)
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=404,
+                detail="Mp not found"
+            )
+        db.commit()
+        return {"rows_updated": result.rowcount}
+    except HTTPException:
+        db.rollback()
+        raise
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
 @app.post("/get-ministers-by-name")
 def get_minister_by_name(request: GetMinisterRequest, db: Session= Depends(get_db)):
     try:
@@ -248,16 +368,43 @@ def get_minister_by_name(request: GetMinisterRequest, db: Session= Depends(get_d
 def get_mp_by_name(request: GetMpRequest, db: Session= Depends(get_db)):
     try:
         name= request.name
+        mp_id= request.id
         constituency_key= request.constituency_key
-        stmt= (
-            select(mp.c.name, mp.c.party, mp.c.criminal_cases, mp.c.education,
-                   mp.c.photo_url, mp.c.slap_count, mp.c.rose_count,
-                   mp.c.constituency, mp.c.constituency_key, manifesto.c.points)
-            .join(manifesto, mp.c.party==manifesto.c.party)
-            .where((mp.c.name==name) & (mp.c.constituency_key==constituency_key))
-        )
-        mp_details= db.execute(stmt).mappings().first()
-        return {"mp_details": mp_details}
+
+        lang= request.lang
+        mp_name, mp_state, mp_constituency= mp_localised(lang)
+        cols= (mp.c.id, mp_name, MP_NAME_EN, mp.c.party, mp_state, mp.c.state_key,
+               mp_constituency, mp.c.constituency_key, mp.c.criminal_cases,
+               mp.c.education, mp.c.photo_url, mp.c.slap_count, mp.c.rose_count)
+        one= (select(*cols, *manifesto_columns(lang))
+                .select_from(mp)
+                .join(manifesto, mp.c.party==manifesto.c.party, isouter=True))
+        many= select(*cols).select_from(mp)
+        if lang == HINDI:
+            one= one.join(mp_hindi, mp.c.id==mp_hindi.c.mp_id, isouter=True)
+            many= many.join(mp_hindi, mp.c.id==mp_hindi.c.mp_id, isouter=True)
+
+        if mp_id is not None:
+            mp_details= db.execute(one.where(mp.c.id==mp_id)).mappings().first()
+            return {"mp_details": localise_points(mp_details, lang)}
+
+        if name and constituency_key:
+            mp_details= db.execute(
+                one.where((mp.c.name==name) & (mp.c.constituency_key==constituency_key))
+            ).mappings().first()
+            return {"mp_details": localise_points(mp_details, lang)}
+
+        if name:
+            matches_name= mp.c.name.ilike(f"%{name}%")
+            if lang == HINDI:
+                matches_name= matches_name | mp_hindi.c.name_hindi.ilike(f"%{name}%")
+            matches= db.execute(
+                many.where(matches_name).order_by(mp.c.name).limit(25)
+            ).mappings().all()
+            return {"mps": matches}
+
+        all_mps= db.execute(many.order_by(mp.c.name)).mappings().all()
+        return {"mps": all_mps}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
@@ -319,6 +466,7 @@ def get_cm(request: GetCmRequest, db: Session= Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
 
 
 @app.get("/get-leaderboard-cm")
